@@ -29,7 +29,7 @@ class DXFExporter {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const siteName = (app.titleBlock && app.titleBlock.data.siteName) || typeLabel;
+      const siteName = Utils.safeFilename((app.titleBlock && app.titleBlock.data.siteName) || typeLabel);
       const date = new Date().toISOString().split('T')[0];
       const prefix = figureType === 'route' ? '【③配線ルート図】' : '【②平面図】';
       a.download = `${prefix}${siteName}_${date}.dxf`;
