@@ -72,8 +72,10 @@ function sendJSON(res, code, obj) {
 const server = http.createServer((req, res) => {
   if (req.method === 'POST' && req.url === '/api/analyze-sketch') {
     let raw = '';
-    req.on('data', chunk => { raw += chunk; if (raw.length > 30 * 1024 * 1024) req.destroy(); });
+    let aborted = false;
+    req.on('data', chunk => { raw += chunk; if (raw.length > 30 * 1024 * 1024) { aborted = true; req.destroy(); } });
     req.on('end', async () => {
+      if (aborted) return;
       let payload = {};
       try { payload = JSON.parse(raw || '{}'); } catch (e) { return sendJSON(res, 400, { error: 'invalid JSON' }); }
       if (!process.env.ANTHROPIC_API_KEY) {
@@ -92,7 +94,9 @@ const server = http.createServer((req, res) => {
   // 静的配信
   let u = decodeURIComponent(req.url.split('?')[0]);
   if (u === '/') u = '/index.html';
-  const fp = path.join(process.cwd(), u);
+  const ROOT = process.cwd();
+  const fp = path.join(ROOT, u);
+  if (fp !== ROOT && !fp.startsWith(ROOT + path.sep)) { res.writeHead(403); res.end('Forbidden'); return; }
   fs.readFile(fp, (e, d) => {
     if (e) { res.writeHead(404); res.end('Not found'); return; }
     res.writeHead(200, { 'Content-Type': MIME[path.extname(fp)] || 'application/octet-stream', 'Cache-Control': 'no-cache' });
