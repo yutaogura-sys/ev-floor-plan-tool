@@ -42,6 +42,11 @@
       <button class="layer-toggle-btn" data-layer="route" title="配線ルート図専用レイヤー">配線ルート図</button>
     </div>
     <div class="header-right">
+      <button class="btn-secondary" id="btn-undo" title="元に戻す (Ctrl+Z)" disabled>↶ 戻す</button>
+      <button class="btn-secondary" id="btn-redo" title="やり直し (Ctrl+Y)" disabled>↷ やり直し</button>
+      <button class="btn-secondary" id="btn-open-project" title="プロジェクトを開く">📂 開く</button>
+      <button class="btn-secondary" id="btn-save-project" title="プロジェクトを保存">💾 保存</button>
+      <input type="file" id="file-open-project" accept=".json" hidden>
       <button class="btn-primary" id="btn-export-plan" disabled>平面図 PDF</button>
       <button class="btn-primary btn-dxf" id="btn-export-plan-dxf" disabled>平面図 DXF</button>
       <button class="btn-primary btn-route" id="btn-export-route" disabled>配線ルート図 PDF</button>
@@ -376,6 +381,8 @@
   <script src="lib/jspdf.umd.min.js"></script>
   <script src="lib/svg2pdf.umd.min.js"></script>
   <script src="js/utils.js"></script>
+  <script src="js/state-serializer.js"></script>
+  <script src="js/history.js"></script>
   <script src="js/dxf-parser.js"></script>
   <script src="js/svg-engine.js"></script>
   <script src="js/viewport.js"></script>
