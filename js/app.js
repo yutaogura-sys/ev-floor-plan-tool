@@ -276,7 +276,7 @@ class App {
         this._onDXFLoaded(dxfData);
       } catch (err) {
         console.error('DXF parse error:', err);
-        alert('DXFファイルの読み込みに失敗しました: ' + err.message);
+        Utils.toast('DXFファイルの読み込みに失敗しました: ' + err.message, 'error');
       }
     });
 
@@ -589,10 +589,10 @@ class App {
       // 履歴を初期化
       this.history.reset(StateSerializer.snapshot(this.svgEngine));
       this._updateHistoryButtons();
-      alert('プロジェクトを読み込みました。DXF/参照PDFは別途再読込してください。');
+      Utils.toast('プロジェクトを読み込みました。DXF/参照PDFは別途再読込してください。');
     } catch (err) {
       console.error('プロジェクト読込エラー:', err);
-      alert('プロジェクトファイルの読み込みに失敗しました: ' + err.message);
+      Utils.toast('プロジェクトファイルの読み込みに失敗しました: ' + err.message, 'error');
     }
   }
 

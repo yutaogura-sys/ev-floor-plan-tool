@@ -278,19 +278,7 @@ class PDFAutoReader {
    * Show a non-blocking notification toast
    */
   _showNotification(msg) {
-    const toast = document.createElement('div');
-    toast.style.cssText = `
-      position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
-      background: #333; color: #fff; padding: 12px 24px; border-radius: 8px;
-      font-size: 14px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      transition: opacity 0.5s;
-    `;
-    toast.textContent = msg;
-    document.body.appendChild(toast);
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      setTimeout(() => toast.remove(), 500);
-    }, 4000);
+    Utils.toast(msg, 'info');
   }
 }
 

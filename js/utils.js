@@ -101,6 +101,17 @@ const Utils = {
     return (num > 1 && !isNaN(num)) ? num : null;
   },
 
+  // 非ブロッキングのトースト通知
+  toast(message, type = 'info') {
+    if (typeof document === 'undefined') return; // Node環境では何もしない
+    const el = document.createElement('div');
+    const bg = type === 'error' ? '#c0392b' : '#333';
+    el.style.cssText = `position:fixed;top:60px;left:50%;transform:translateX(-50%);background:${bg};color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;z-index:10000;box-shadow:0 4px 12px rgba(0,0,0,0.3);transition:opacity 0.5s;`;
+    el.textContent = message;
+    document.body.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 500); }, 4000);
+  },
+
   // Get bounding box of points
   getBoundingBox(points) {
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
