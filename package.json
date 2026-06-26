@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
   "dependencies": {
     "pdf-to-img": "^5.0.0",
     "sharp": "^0.34.5"

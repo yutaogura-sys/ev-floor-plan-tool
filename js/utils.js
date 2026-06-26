@@ -113,3 +113,7 @@ const Utils = {
     return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
   }
 };
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = Utils;
+}
