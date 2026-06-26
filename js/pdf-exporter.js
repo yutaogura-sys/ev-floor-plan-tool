@@ -191,6 +191,39 @@ class PDFExporter {
     return { x: 0, y: 0 };
   }
 
+  // 該当図面の注釈＋下図の内容中心（SVG座標）を返す。内容が無ければビューポート中心。
+  // 注: グループは translate/rotate を持つため getBBox(ローカル)を getCTM で SVG座標へ変換する。
+  _contentCenter(allowedFigures = ['plan', 'shared']) {
+    const annotationLayer = document.getElementById('annotation-layer');
+    const dxfLayer = document.getElementById('dxf-layer');
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity, has = false;
+    const accEl = (el) => {
+      let b;
+      try { b = el.getBBox(); } catch (e) { return; }
+      const m = el.getCTM();
+      if (!m || (b.width <= 0 && b.height <= 0)) return;
+      [[b.x, b.y], [b.x + b.width, b.y], [b.x + b.width, b.y + b.height], [b.x, b.y + b.height]].forEach(([x, y]) => {
+        const px = m.a * x + m.c * y + m.e;
+        const py = m.b * x + m.d * y + m.f;
+        minX = Math.min(minX, px); minY = Math.min(minY, py);
+        maxX = Math.max(maxX, px); maxY = Math.max(maxY, py);
+      });
+      has = true;
+    };
+    if (annotationLayer) {
+      annotationLayer.querySelectorAll('[data-type]').forEach((ann) => {
+        const fig = ann.getAttribute('data-figure') || 'plan';
+        if (!allowedFigures.includes(fig)) return;
+        accEl(ann);
+      });
+    }
+    if (dxfLayer) accEl(dxfLayer);
+    if (has) return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+    const svg = document.getElementById('drawing-canvas');
+    const vb = svg.viewBox.baseVal;
+    return { x: vb.x + vb.width / 2, y: vb.y + vb.height / 2 };
+  }
+
   _computeExportViewBox(allowedFigures = ['plan', 'shared']) {
     // Check if scale is specified — if so, use scale-based calculation
     const scaleStr = (typeof app !== 'undefined' && app.titleBlock?.data?.scale) || '';
@@ -203,20 +236,18 @@ class PDFExporter {
       const vbW = paper.w * scaleN / 1000; // 例: 420 * 100 / 1000 = 42m
       const vbH = paper.h * scaleN / 1000; // 例: 297 * 100 / 1000 = 29.7m
 
-      // Use export boundary position if available, otherwise fall back to viewport center
+      // 範囲表示で明示設定済みならそれを優先
       const eb = (typeof app !== 'undefined' && app.exportBoundary?.bounds);
       if (eb && eb.w > 0) {
         return { x: eb.x, y: eb.y, w: eb.w, h: eb.h };
       }
 
-      const svg = document.getElementById('drawing-canvas');
-      const vb = svg.viewBox.baseVal;
-      const cx = vb.x + vb.width / 2;
-      const cy = vb.y + vb.height / 2;
-
+      // 未設定時は図面内容（該当図面の注釈＋下図）の中心に枠を合わせて自動フレーミング
+      // （ビューポートのスクロール位置に依存せず、図面全体を均等な余白で収める）
+      const center = this._contentCenter(allowedFigures);
       return {
-        x: cx - vbW / 2,
-        y: cy - vbH / 2,
+        x: center.x - vbW / 2,
+        y: center.y - vbH / 2,
         w: vbW,
         h: vbH
       };
