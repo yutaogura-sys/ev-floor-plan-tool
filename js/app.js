@@ -1,0 +1,481 @@
+// Main Application - Initializes all components and manages state
+class App {
+  constructor() {
+    this.state = {
+      dxfData: null,
+      surfaceType: 'アスファルト',
+      annotations: [],
+      undoStack: []
+    };
+
+    // Initialize components
+    this.svgElement = document.getElementById('drawing-canvas');
+    this.container = document.getElementById('canvas-container');
+
+    this.svgEngine = new SVGEngine(this.svgElement);
+    this.viewport = new Viewport(this.svgElement, this.container);
+    this.layerManager = new LayerManager();
+    this.dxfParser = new DXFParser();
+    this.toolManager = new ToolManager(this.viewport, this.svgEngine);
+    this.titleBlock = new TitleBlock(this.svgEngine);
+    this.pdfExporter = new PDFExporter(this.svgEngine);
+    this.pdfViewer = new PDFViewer();
+
+    // Initialize symbols
+    Symbols.init(this.svgElement);
+
+    // Register tools
+    this.toolManager.registerTool('select', new SelectTool(this.svgEngine, this.viewport));
+    this.toolManager.registerTool('charging-space', new ChargingSpaceTool(this.svgEngine));
+    this.toolManager.registerTool('charger', new ChargerTool(this.svgEngine));
+    this.toolManager.registerTool('dimension', new DimensionTool(this.svgEngine));
+    this.toolManager.registerTool('road-marking', new RoadMarkingTool(this.svgEngine));
+    this.toolManager.registerTool('wheel-stop', new WheelStopTool(this.svgEngine));
+    this.toolManager.registerTool('text', new TextTool(this.svgEngine));
+
+    // Boundary rectangle tool
+    this.toolManager.registerTool('boundary-rect', {
+      svgEngine: this.svgEngine,
+      onMouseDown(point, e) {
+        if (e.button !== 0) return;
+        const wStr = prompt('幅 (mm)', '10800');
+        if (wStr === null) return;
+        const hStr = prompt('高さ (mm)', '5200');
+        if (hStr === null) return;
+        const w = parseFloat(wStr) / 1000;
+        const h = parseFloat(hStr) / 1000;
+        if (isNaN(w) || isNaN(h) || w <= 0 || h <= 0) return;
+        const id = Utils.generateId();
+        this.svgEngine.createBoundaryRect(id, point.x, point.y, w, h, '#0066cc');
+      }
+    });
+
+    // Leader annotation tools (wire/equipment/conduit)
+    this.toolManager.registerTool('wire', new LeaderTool(this.svgEngine, 'wire', '#cc6600', '配線仕様を入力 (例: WL1 8sq 5m×2)'));
+    this.toolManager.registerTool('equipment', new LeaderTool(this.svgEngine, 'equipment', '#009933', '機器名称を入力 (例: P.BOX 5個)'));
+    this.toolManager.registerTool('conduit', new LeaderTool(this.svgEngine, 'conduit', '#0066cc', '配管仕様を入力 (例: FEP 28)'));
+
+    // Wiring route diagram tools
+    this.toolManager.registerTool('wiring-route', new WiringRouteTool(this.svgEngine));
+    this.toolManager.registerTool('cubicle', {
+      svgEngine: this.svgEngine,
+      onMouseDown(point, e) {
+        if (e.button !== 0) return;
+        const label = prompt('名称を入力 (例: 分電盤, キュービクル)', '分電盤');
+        if (label === null) return;
+        const id = Utils.generateId();
+        this.svgEngine.createCubicle(id, point.x, point.y, 1.0, 0.6, label);
+        if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+      }
+    });
+    this.toolManager.registerTool('pole', {
+      svgEngine: this.svgEngine,
+      onMouseDown(point, e) {
+        if (e.button !== 0) return;
+        const material = prompt('材質を入力 (例: コンクリート, 鋼管)', 'コンクリート');
+        if (material === null) return;
+        const height = prompt('高さを入力 (例: 8m)', '8m');
+        const id = Utils.generateId();
+        this.svgEngine.createPole(id, point.x, point.y, material, height || '8m');
+        if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+      }
+    });
+    this.toolManager.registerTool('handhole', {
+      svgEngine: this.svgEngine,
+      onMouseDown(point, e) {
+        if (e.button !== 0) return;
+        const id = Utils.generateId();
+        this.svgEngine.createHandhole(id, point.x, point.y);
+        if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+      }
+    });
+    this.toolManager.registerTool('pullbox', {
+      svgEngine: this.svgEngine,
+      onMouseDown(point, e) {
+        if (e.button !== 0) return;
+        const size = prompt('サイズを入力 (例: 200, 300, 400)', '200');
+        if (size === null) return;
+        const material = prompt('材質を入力 (例: SUS, 鉄)', 'SUS');
+        const id = Utils.generateId();
+        this.svgEngine.createPullBox(id, point.x, point.y, size || '200', material || 'SUS');
+        if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+      }
+    });
+    this.toolManager.registerTool('existing-charger', {
+      svgEngine: this.svgEngine,
+      onMouseDown(point, e) {
+        if (e.button !== 0) return;
+        const label = prompt('既設充電設備ラベル (例: 充電器①)', '');
+        const id = Utils.generateId();
+        this.svgEngine.createExistingCharger(id, point.x, point.y, 0, label || '');
+        if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+      }
+    });
+
+    // Pan tool (no dedicated class needed)
+    this.toolManager.registerTool('pan', {
+      activate() {},
+      deactivate() {}
+    });
+
+    // Foundation tool
+    this.toolManager.registerTool('foundation', {
+      svgEngine: this.svgEngine,
+      onMouseDown(point, e) {
+        if (e.button !== 0) return;
+        const id = Utils.generateId();
+        // Default: 500x500x500mm = 0.5x0.5x0.5 in DXF units
+        this.svgEngine.createFoundation(id, point.x, point.y, 0.5, 0.5, 0.5, 'コンクリート');
+        if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+      }
+    });
+
+    // Bollard tool
+    this.toolManager.registerTool('bollard', {
+      svgEngine: this.svgEngine,
+      onMouseDown(point, e) {
+        if (e.button !== 0) return;
+        const id = Utils.generateId();
+        this.svgEngine.createBollard(id, point.x, point.y);
+        if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+      }
+    });
+
+    // Lighting tool
+    this.toolManager.registerTool('lighting', {
+      svgEngine: this.svgEngine,
+      onMouseDown(point, e) {
+        if (e.button !== 0) return;
+        const id = Utils.generateId();
+        this.svgEngine.createLighting(id, point.x, point.y);
+        if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+      }
+    });
+
+    // Bind file inputs
+    this._bindFileInputs();
+
+    // Bind dual export buttons (PDF)
+    document.getElementById('btn-export-plan').addEventListener('click', () => {
+      this.pdfExporter.exportPDF('plan');
+    });
+    document.getElementById('btn-export-route').addEventListener('click', () => {
+      this.pdfExporter.exportPDF('route');
+    });
+
+    // Bind DXF export buttons
+    this.dxfExporter = new DXFExporter(this.svgEngine);
+    document.getElementById('btn-export-plan-dxf').addEventListener('click', () => {
+      this.dxfExporter.exportDXF('plan');
+    });
+    document.getElementById('btn-export-route-dxf').addEventListener('click', () => {
+      this.dxfExporter.exportDXF('route');
+    });
+
+    // Header layer toggle buttons
+    document.querySelectorAll('.layer-toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const layer = btn.dataset.layer;
+        // Map layer to a default tool in that layer
+        const layerDefaults = {
+          'shared': 'select',
+          'plan': 'charging-space',
+          'route': 'wiring-route'
+        };
+        const toolName = layerDefaults[layer] || 'select';
+        this.toolManager.setActiveTool(toolName);
+      });
+    });
+
+    // Initialize figure layer manager
+    this.figureLayerManager = new FigureLayerManager();
+    this.figureLayerManager.init();
+
+    // Initialize PDF viewer
+    this.pdfViewer.init();
+
+    // Initialize export boundary preview
+    this.exportBoundary = new ExportBoundaryPreview();
+    this.exportBoundary.startTracking();
+    const boundaryCheckbox = document.getElementById('fig-layer-boundary');
+    if (boundaryCheckbox) {
+      boundaryCheckbox.addEventListener('change', () => {
+        this.exportBoundary.toggle(boundaryCheckbox.checked);
+      });
+    }
+    // "範囲表示" button — force show and enable checkbox
+    const showBoundaryBtn = document.getElementById('btn-show-boundary');
+    if (showBoundaryBtn) {
+      showBoundaryBtn.addEventListener('click', () => {
+        this.exportBoundary.visible = true;
+        if (boundaryCheckbox) boundaryCheckbox.checked = true;
+        this.exportBoundary.update();
+      });
+    }
+
+    // Initialize wiring summary
+    this.wiringSummary = new WiringSummary(this.svgEngine);
+
+    // Bind wiring summary button
+    const summaryBtn = document.getElementById('btn-wiring-summary');
+    if (summaryBtn) {
+      summaryBtn.addEventListener('click', () => {
+        this.wiringSummary.generateAutoPlaced();
+      });
+    }
+
+    // Initialize PDF auto-reader
+    this.pdfAutoReader = new PDFAutoReader(this.svgEngine, this.pdfViewer);
+
+    // Panel collapse toggling
+    document.querySelectorAll('.panel-title').forEach(title => {
+      title.addEventListener('click', () => {
+        const contentId = title.dataset.collapse;
+        const content = document.getElementById(contentId);
+        if (content) {
+          content.classList.toggle('collapsed');
+          title.classList.toggle('collapsed');
+        }
+      });
+    });
+
+    // Set default viewbox
+    this.svgElement.setAttribute('viewBox', '-100 -100 200 200');
+
+    console.log('EV充電設備 平面図作成ツール initialized');
+  }
+
+  _bindFileInputs() {
+    // DXF file input
+    const dxfInput = document.getElementById('file-dxf');
+    dxfInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      document.getElementById('dxf-name').textContent = file.name;
+      document.getElementById('dxf-name').classList.add('loaded');
+
+      try {
+        const text = await file.text();
+        const dxfData = await this.dxfParser.parse(text);
+        this.state.dxfData = dxfData;
+        this._onDXFLoaded(dxfData);
+      } catch (err) {
+        console.error('DXF parse error:', err);
+        alert('DXFファイルの読み込みに失敗しました: ' + err.message);
+      }
+    });
+
+    // Sketch PDF file input
+    const sketchInput = document.getElementById('file-sketch');
+    sketchInput.addEventListener('change', async (e) => {
+      const files = e.target.files;
+      if (!files.length) return;
+
+      const names = Array.from(files).map(f => f.name).join(', ');
+      document.getElementById('sketch-names').textContent = names;
+      document.getElementById('sketch-names').classList.add('loaded');
+
+      for (const file of files) {
+        await this.pdfViewer.loadPDF(file);
+      }
+    });
+
+    // Drag and drop support
+    const dropzones = [
+      { el: document.getElementById('dropzone-dxf'), type: 'dxf' },
+      { el: document.getElementById('dropzone-sketch'), type: 'sketch' }
+    ];
+
+    dropzones.forEach(({ el, type }) => {
+      el.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        el.style.background = 'rgba(74,158,255,0.2)';
+      });
+      el.addEventListener('dragleave', () => {
+        el.style.background = '';
+      });
+      el.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        el.style.background = '';
+        const files = e.dataTransfer.files;
+        if (type === 'dxf' && files[0]) {
+          document.getElementById('file-dxf').files = files;
+          document.getElementById('file-dxf').dispatchEvent(new Event('change'));
+        } else if (type === 'sketch') {
+          document.getElementById('file-sketch').files = files;
+          document.getElementById('file-sketch').dispatchEvent(new Event('change'));
+        }
+      });
+    });
+  }
+
+  _onDXFLoaded(dxfData) {
+    // Render DXF geometry
+    this.svgEngine.renderDXF(dxfData);
+
+    // Initialize layers
+    this.layerManager.init(dxfData);
+
+    // Set viewport bounds and fit — prefer EV_ annotation layer bounds if present
+    this.viewport.setBounds(dxfData.bounds);
+    const evBounds = this._computeEVLayerBounds(dxfData);
+    if (evBounds) {
+      this.viewport.fitToExtents(evBounds);
+    } else {
+      this.viewport.fitToExtents();
+    }
+
+    // Render title block
+    this.titleBlock.render({
+      minX: dxfData.bounds.minX,
+      maxX: dxfData.bounds.maxX,
+      minY: -dxfData.bounds.maxY,
+      maxY: -dxfData.bounds.minY
+    });
+
+    // Enable export buttons
+    document.getElementById('btn-export-plan').disabled = false;
+    document.getElementById('btn-export-route').disabled = false;
+    document.getElementById('btn-export-plan-dxf').disabled = false;
+    document.getElementById('btn-export-route-dxf').disabled = false;
+
+    // Show export boundary preview after DXF load
+    if (this.exportBoundary) {
+      setTimeout(() => this.exportBoundary.update(), 100);
+    }
+
+    // Log stats
+    let totalPolylines = 0;
+    let totalVertices = 0;
+    for (const layer of Object.values(dxfData.layers)) {
+      totalPolylines += (layer.polylines || []).length;
+      for (const pl of (layer.polylines || [])) {
+        totalVertices += pl.vertices.length;
+      }
+    }
+    console.log(`DXF loaded: ${Object.keys(dxfData.layers).length} layers, ${totalPolylines} polylines, ${totalVertices} vertices`);
+
+    // Try to extract site name from filename
+    const dxfName = document.getElementById('dxf-name').textContent;
+    if (dxfName && dxfName !== '未選択') {
+      // Extract from filename like "○○県...（○○モール △△店）.dxf"
+      const match = dxfName.match(/（(.+?)）/);
+      if (match) {
+        const siteNameInput = document.getElementById('tb-site-name');
+        if (siteNameInput && !siteNameInput.value) {
+          siteNameInput.value = match[1];
+          this.titleBlock.data.siteName = match[1];
+          this.titleBlock.render();
+        }
+      }
+    }
+  }
+
+  // Compute bounds from EV_ annotation layers in imported DXF (for centering)
+  _computeEVLayerBounds(dxfData) {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    let hasEV = false;
+
+    for (const [layerName, layerData] of Object.entries(dxfData.layers)) {
+      if (!layerName.startsWith('EV_')) continue;
+      hasEV = true;
+      for (const pl of (layerData.polylines || [])) {
+        for (const v of pl.vertices) {
+          if (v.x < minX) minX = v.x;
+          if (v.y < minY) minY = v.y;
+          if (v.x > maxX) maxX = v.x;
+          if (v.y > maxY) maxY = v.y;
+        }
+      }
+      for (const ln of (layerData.lines || [])) {
+        if (ln.x1 < minX) minX = ln.x1;
+        if (ln.y1 < minY) minY = ln.y1;
+        if (ln.x2 < minX) minX = ln.x2;
+        if (ln.y2 < minY) minY = ln.y2;
+        if (ln.x1 > maxX) maxX = ln.x1;
+        if (ln.y1 > maxY) maxY = ln.y1;
+        if (ln.x2 > maxX) maxX = ln.x2;
+        if (ln.y2 > maxY) maxY = ln.y2;
+      }
+      for (const t of (layerData.texts || [])) {
+        if (t.x < minX) minX = t.x;
+        if (t.y < minY) minY = t.y;
+        if (t.x > maxX) maxX = t.x;
+        if (t.y > maxY) maxY = t.y;
+      }
+    }
+
+    if (!hasEV || !isFinite(minX)) return null;
+    // Add padding (30% of content size, min 20m to show surrounding context)
+    const w = maxX - minX;
+    const h = maxY - minY;
+    const pad = Math.max(Math.max(w, h) * 0.3, 20);
+    return { minX: minX - pad, minY: minY - pad, maxX: maxX + pad, maxY: maxY + pad };
+  }
+
+  // Update subsidy requirements checklist
+  updateChecklist() {
+    const checks = {
+      // 平面図チェック
+      'basic-info': this.titleBlock.isComplete(),
+      'space-dim': this._hasAnnotationType('charging-space'),
+      'equip-pos': this._hasAnnotationType('charger'),
+      'foundation': this._hasAnnotationType('foundation'),
+      'line-marking': this._hasAnnotationType('charging-space'),
+      'road-marking': this._hasAnnotationType('road-marking'),
+      'bollard': this._hasAnnotationType('bollard'),
+      'wheel-stop': this._hasAnnotationType('wheel-stop'),
+      'lighting': this._hasAnnotationType('lighting'),
+      // 配線ルート図チェック
+      'route-basic-info': this.titleBlock.isComplete(),
+      'route-wiring': this._hasAnnotationType('wiring-route'),
+      'route-equipment': this._hasAnnotationType('cubicle') || this._hasAnnotationType('charger'),
+      'route-pole': this._hasAnnotationType('pole'),
+      'route-handhole': this._hasAnnotationType('handhole'),
+      'route-existing': this._hasAnnotationType('existing-charger'),
+      'route-summary': this._hasAnnotationType('wiring-summary'),
+    };
+
+    for (const [req, satisfied] of Object.entries(checks)) {
+      const li = document.querySelector(`[data-req="${req}"]`);
+      if (li) {
+        const icon = li.querySelector('.check-icon');
+        if (satisfied) {
+          li.classList.add('satisfied');
+          icon.textContent = '\u2714';
+        } else {
+          li.classList.remove('satisfied');
+          icon.textContent = '\u25CB';
+        }
+      }
+    }
+
+    // Update export boundary preview when annotations change
+    if (this.exportBoundary) {
+      this.exportBoundary.update();
+    }
+  }
+
+  _hasAnnotationType(type) {
+    const group = this.svgEngine.annotationLayer;
+    return group.querySelector(`[data-type="${type}"]`) !== null;
+  }
+
+  undo() {
+    // Simple undo: remove last added annotation
+    const annotations = this.svgEngine.getAnnotations();
+    if (annotations.length > 0) {
+      const last = annotations[annotations.length - 1];
+      this.state.undoStack.push(last.outerHTML);
+      last.remove();
+      this.updateChecklist();
+    }
+  }
+}
+
+// Initialize application when DOM is ready
+let app;
+document.addEventListener('DOMContentLoaded', () => {
+  app = new App();
+});

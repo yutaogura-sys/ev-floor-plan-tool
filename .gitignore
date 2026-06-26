@@ -1,0 +1,17 @@
+# 依存（再生成可能・サイズ大）
+node_modules/
+
+# ローカルのエディタ/エージェント設定（ローカル絶対パス・顧客名を含むため除外）
+.claude/
+
+# 顧客データ・開発用素材（パブリックリポジトリに含めない）
+開発用素材/
+*.dxf
+*.pdf
+output-*.png
+ref-*.png
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini

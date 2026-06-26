@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EV充電設備 平面図作成ツール</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- ===== ヘッダー ===== -->
+  <header id="header">
+    <div class="header-left">
+      <h1>EV充電設備 図面作成ツール</h1>
+    </div>
+    <div class="header-center">
+      <div class="import-group">
+        <div class="import-slot" id="import-sketch">
+          <label>① 下書き（ラフ図）PDF</label>
+          <div class="import-dropzone" id="dropzone-sketch">
+            <input type="file" id="file-sketch" accept=".pdf" multiple hidden>
+            <button class="import-btn" onclick="document.getElementById('file-sketch').click()">
+              <span class="icon">📄</span> ファイル選択
+            </button>
+            <span class="file-names" id="sketch-names">未選択</span>
+          </div>
+        </div>
+        <div class="import-slot" id="import-dxf">
+          <label>② DXFファイル</label>
+          <div class="import-dropzone" id="dropzone-dxf">
+            <input type="file" id="file-dxf" accept=".dxf" hidden>
+            <button class="import-btn" onclick="document.getElementById('file-dxf').click()">
+              <span class="icon">📐</span> ファイル選択
+            </button>
+            <span class="file-names" id="dxf-name">未選択</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="header-layer-toggle" id="header-layer-toggle">
+      <button class="layer-toggle-btn active" data-layer="shared" title="共通レイヤー">共通</button>
+      <button class="layer-toggle-btn" data-layer="plan" title="平面図専用レイヤー">平面図</button>
+      <button class="layer-toggle-btn" data-layer="route" title="配線ルート図専用レイヤー">配線ルート図</button>
+    </div>
+    <div class="header-right">
+      <button class="btn-primary" id="btn-export-plan" disabled>平面図 PDF</button>
+      <button class="btn-primary btn-dxf" id="btn-export-plan-dxf" disabled>平面図 DXF</button>
+      <button class="btn-primary btn-route" id="btn-export-route" disabled>配線ルート図 PDF</button>
+      <button class="btn-primary btn-route btn-dxf" id="btn-export-route-dxf" disabled>配線ルート図 DXF</button>
+    </div>
+  </header>
+
+  <!-- ===== メインエリア ===== -->
+  <div id="main">
+    <!-- ツールバー -->
+    <aside id="toolbar">
+      <div class="tool-section">
+        <span class="section-label">基本</span>
+        <button class="tool-btn active" data-tool="select" title="選択 (V)">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" fill="currentColor"/></svg>
+          <span>選択</span>
+        </button>
+        <button class="tool-btn" data-tool="pan" title="パン (H)">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M10 9h4V6h3l-5-5-5 5h3v3zm-1 1H6V7l-5 5 5 5v-3h3v-4zm14 2l-5-5v3h-3v4h3v3l5-5zm-9 3h-4v3H7l5 5 5-5h-3v-3z" fill="currentColor"/></svg>
+          <span>移動</span>
+        </button>
+      </div>
+      <div class="tool-section">
+        <span class="section-label">充電設備</span>
+        <button class="tool-btn" data-tool="charging-space" title="充電スペース (S)">
+          <svg viewBox="0 0 24 24" width="20" height="20"><rect x="3" y="3" width="18" height="18" rx="1" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="4 2"/></svg>
+          <span>スペース</span>
+        </button>
+        <button class="tool-btn" data-tool="charger" title="充電設備 (C)">
+          <svg viewBox="0 0 24 24" width="20" height="20"><rect x="5" y="2" width="14" height="20" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v4m-2 0h4" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="17" r="2" fill="currentColor"/></svg>
+          <span>充電器</span>
+        </button>
+        <button class="tool-btn" data-tool="foundation" title="基礎 (F)">
+          <svg viewBox="0 0 24 24" width="20" height="20"><rect x="4" y="4" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"/><line x1="4" y1="4" x2="20" y2="20" stroke="currentColor" stroke-width="1"/><line x1="20" y1="4" x2="4" y2="20" stroke="currentColor" stroke-width="1"/></svg>
+          <span>基礎</span>
+        </button>
+      </div>
+      <div class="tool-section">
+        <span class="section-label">付帯設備</span>
+        <button class="tool-btn" data-tool="road-marking" title="路面表示 (M)">
+          <svg viewBox="0 0 24 24" width="20" height="20"><rect x="4" y="4" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"/><text x="12" y="16" text-anchor="middle" font-size="10" fill="currentColor">EV</text></svg>
+          <span>路面表示</span>
+        </button>
+        <button class="tool-btn" data-tool="wheel-stop" title="車止め (W)">
+          <svg viewBox="0 0 24 24" width="20" height="20"><rect x="3" y="10" width="18" height="4" rx="2" fill="currentColor"/></svg>
+          <span>車止め</span>
+        </button>
+        <button class="tool-btn" data-tool="bollard" title="防護用部材 (B)">
+          <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
+          <span>防護部材</span>
+        </button>
+        <button class="tool-btn" data-tool="lighting" title="電灯 (L)">
+          <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="2"/><line x1="12" y1="16" x2="12" y2="22" stroke="currentColor" stroke-width="2"/><path d="M9 10l3-4 3 4" fill="currentColor"/></svg>
+          <span>電灯</span>
+        </button>
+      </div>
+      <div class="tool-section">
+        <span class="section-label">注釈</span>
+        <button class="tool-btn" data-tool="dimension" title="寸法線 (D)">
+          <svg viewBox="0 0 24 24" width="20" height="20"><line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2"/><line x1="4" y1="8" x2="4" y2="16" stroke="currentColor" stroke-width="1"/><line x1="20" y1="8" x2="20" y2="16" stroke="currentColor" stroke-width="1"/><path d="M4 12l4-2v4z" fill="currentColor"/><path d="M20 12l-4-2v4z" fill="currentColor"/></svg>
+          <span>寸法線</span>
+        </button>
+        <button class="tool-btn" data-tool="boundary-rect" title="囲み線">
+          <svg viewBox="0 0 24 24" width="20" height="20"><rect x="3" y="5" width="18" height="14" fill="none" stroke="currentColor" stroke-width="2"/><text x="12" y="3.5" text-anchor="middle" font-size="5" fill="currentColor">2700</text></svg>
+          <span>囲み線</span>
+        </button>
+        <button class="tool-btn" data-tool="text" title="テキスト (T)">
+          <svg viewBox="0 0 24 24" width="20" height="20"><text x="12" y="18" text-anchor="middle" font-size="18" font-weight="bold" fill="currentColor">A</text></svg>
+          <span>テキスト</span>
+        </button>
+      </div>
+      <div class="tool-section">
+        <span class="section-label">配線・配管</span>
+        <button class="tool-btn" data-tool="wire" title="配線注記 (R)">
+          <svg viewBox="0 0 24 24" width="20" height="20"><line x1="4" y1="18" x2="14" y2="6" stroke="currentColor" stroke-width="2"/><circle cx="4" cy="18" r="2" fill="currentColor"/><text x="16" y="8" font-size="8" fill="currentColor">W</text></svg>
+          <span>配線</span>
+        </button>
+        <button class="tool-btn" data-tool="equipment" title="機器注記 (E)">
+          <svg viewBox="0 0 24 24" width="20" height="20"><line x1="4" y1="18" x2="14" y2="6" stroke="currentColor" stroke-width="2"/><circle cx="4" cy="18" r="2" fill="currentColor"/><rect x="12" y="3" width="9" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
+          <span>機器</span>
+        </button>
+        <button class="tool-btn" data-tool="conduit" title="配管注記 (P)">
+          <svg viewBox="0 0 24 24" width="20" height="20"><line x1="4" y1="18" x2="14" y2="6" stroke="currentColor" stroke-width="2"/><circle cx="4" cy="18" r="2" fill="currentColor"/><text x="15" y="10" font-size="9" fill="currentColor">配</text></svg>
+          <span>配管</span>
+        </button>
+      </div>
+      <div class="tool-section">
+        <span class="section-label">配線ルート図</span>
+        <button class="tool-btn" data-tool="wiring-route" title="配線ルート (G)">
+          <svg viewBox="0 0 24 24" width="20" height="20"><polyline points="4,18 10,10 16,14 20,4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="4" cy="18" r="2" fill="currentColor"/><circle cx="20" cy="4" r="2" fill="currentColor"/></svg>
+          <span>配線ルート</span>
+        </button>
+        <button class="tool-btn" data-tool="cubicle" title="分電盤/キュービクル (K)">
+          <svg viewBox="0 0 24 24" width="20" height="20"><rect x="4" y="6" width="16" height="12" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><text x="12" y="15" text-anchor="middle" font-size="7" fill="currentColor">盤</text></svg>
+          <span>分電盤</span>
+        </button>
+        <button class="tool-btn" data-tool="pole" title="建柱 (O)">
+          <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="2"/><line x1="7" y1="7" x2="17" y2="17" stroke="currentColor" stroke-width="1.5"/><line x1="17" y1="7" x2="7" y2="17" stroke="currentColor" stroke-width="1.5"/></svg>
+          <span>建柱</span>
+        </button>
+        <button class="tool-btn" data-tool="handhole" title="ハンドホール (J)">
+          <svg viewBox="0 0 24 24" width="20" height="20"><rect x="6" y="6" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"/><text x="12" y="15" text-anchor="middle" font-size="8" font-weight="bold" fill="currentColor">HH</text></svg>
+          <span>HH</span>
+        </button>
+        <button class="tool-btn" data-tool="pullbox" title="プルボックス (U)">
+          <svg viewBox="0 0 24 24" width="20" height="20"><rect x="5" y="5" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"/><text x="12" y="15" text-anchor="middle" font-size="7" font-weight="bold" fill="currentColor">PB</text></svg>
+          <span>PB</span>
+        </button>
+        <button class="tool-btn" data-tool="existing-charger" title="既設充電設備 (X)">
+          <svg viewBox="0 0 24 24" width="20" height="20"><rect x="5" y="4" width="14" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="4 2"/><text x="12" y="15" text-anchor="middle" font-size="8" fill="currentColor">既</text></svg>
+          <span>既設</span>
+        </button>
+        <button class="tool-btn" id="btn-wiring-summary" title="配線集計表を生成" style="background:#1a3300;border-color:#336600;">
+          <svg viewBox="0 0 24 24" width="20" height="20"><rect x="3" y="3" width="18" height="18" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="3" y1="9" x2="21" y2="9" stroke="currentColor" stroke-width="1"/><line x1="3" y1="14" x2="21" y2="14" stroke="currentColor" stroke-width="1"/><line x1="10" y1="3" x2="10" y2="21" stroke="currentColor" stroke-width="1"/></svg>
+          <span>集計表</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- SVGキャンバス -->
+    <div id="canvas-container">
+      <div id="loading-overlay" class="hidden">
+        <div class="loading-spinner"></div>
+        <p id="loading-text">DXFファイルを読み込み中...</p>
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      </div>
+      <svg id="drawing-canvas" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="grid-pattern" width="10" height="10" patternUnits="userSpaceOnUse">
+            <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#e0e0e0" stroke-width="0.2"/>
+          </pattern>
+          <pattern id="grid-pattern-major" width="100" height="100" patternUnits="userSpaceOnUse">
+            <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#c0c0c0" stroke-width="0.4"/>
+          </pattern>
+          <marker id="dim-arrow-start" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto">
+            <path d="M8,0 L0,3 L8,6" fill="none" stroke="#333" stroke-width="0.5"/>
+          </marker>
+          <marker id="dim-arrow-end" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L8,3 L0,6" fill="none" stroke="#333" stroke-width="0.5"/>
+          </marker>
+        </defs>
+        <g id="grid-layer">
+          <rect width="100%" height="100%" fill="url(#grid-pattern)"/>
+          <rect width="100%" height="100%" fill="url(#grid-pattern-major)"/>
+        </g>
+        <g id="dxf-layer"></g>
+        <g id="pdf-overlay-layer"></g>
+        <g id="annotation-layer">
+          <g id="charging-spaces-group"></g>
+          <g id="equipment-group"></g>
+          <g id="dimensions-group"></g>
+          <g id="labels-group"></g>
+          <g id="road-markings-group"></g>
+          <g id="wheel-stops-group"></g>
+          <g id="bollards-group"></g>
+          <g id="lighting-group"></g>
+          <g id="foundations-group"></g>
+          <g id="text-group"></g>
+          <g id="wiring-routes-group"></g>
+          <g id="cubicles-group"></g>
+          <g id="poles-group"></g>
+          <g id="handholes-group"></g>
+          <g id="pullboxes-group"></g>
+        </g>
+        <g id="title-block-layer"></g>
+        <g id="interaction-layer"></g>
+        <g id="export-boundary-layer"></g>
+      </svg>
+      <!-- ズームコントロール -->
+      <div id="zoom-controls">
+        <button id="btn-zoom-in" title="拡大">+</button>
+        <span id="zoom-level">100%</span>
+        <button id="btn-zoom-out" title="縮小">-</button>
+        <button id="btn-zoom-fit" title="全体表示">□</button>
+      </div>
+    </div>
+
+    <!-- 右パネル -->
+    <aside id="right-panel">
+      <!-- プロパティ編集 -->
+      <div class="panel-section" id="properties-section">
+        <h3 class="panel-title" data-collapse="properties-content">プロパティ</h3>
+        <div class="panel-content" id="properties-content">
+          <p class="placeholder-text">要素を選択してください</p>
+        </div>
+      </div>
+
+      <!-- 図面枠情報 -->
+      <div class="panel-section" id="title-block-section">
+        <h3 class="panel-title" data-collapse="title-block-content">図面枠情報</h3>
+        <div class="panel-content" id="title-block-content">
+          <div class="form-group">
+            <label>設置場所</label>
+            <input type="text" id="tb-site-name" placeholder="例：○○モール △△店">
+          </div>
+          <div class="form-group">
+            <label>工事名称</label>
+            <input type="text" id="tb-project-name" value="充電設備設置工事">
+          </div>
+          <div class="form-group">
+            <label>図面名称</label>
+            <input type="text" id="tb-drawing-name" value="平面図">
+          </div>
+          <div class="form-group">
+            <label>作成者</label>
+            <input type="text" id="tb-author" placeholder="例：ENECHANGE EVラボ株式会社">
+          </div>
+          <div class="form-group">
+            <label>縮尺 <small style="color:#888">(PDF出力範囲に反映)</small></label>
+            <div style="display:flex;gap:4px;align-items:center">
+              <input type="text" id="tb-scale" value="A3:1/100" placeholder="例: 1/100, 1:200" style="flex:1">
+              <button id="btn-show-boundary" title="出力範囲をキャンバスに表示" style="padding:4px 8px;font-size:11px;border:1px solid #4a9eff;border-radius:3px;background:#eef5ff;color:#2a6ed8;cursor:pointer;white-space:nowrap">範囲表示</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>作成日</label>
+            <input type="date" id="tb-date">
+          </div>
+          <div class="form-group">
+            <label>北方向 (°) <small style="color:#888">0°=上が北</small></label>
+            <input type="number" id="tb-north-angle" value="0" step="1" placeholder="0">
+          </div>
+        </div>
+      </div>
+
+      <!-- レイヤー制御 -->
+      <div class="panel-section" id="layer-section">
+        <h3 class="panel-title" data-collapse="layer-content">レイヤー</h3>
+        <div class="panel-content" id="layer-content">
+          <div class="figure-layer-list">
+            <span class="section-label" style="font-size:11px;margin-bottom:4px;display:block">図面レイヤー</span>
+            <div class="layer-item">
+              <input type="checkbox" id="fig-layer-plan" checked>
+              <span class="layer-color" style="background:#cc0000"></span>
+              <span class="layer-name">平面図専用</span>
+            </div>
+            <div class="layer-item">
+              <input type="checkbox" id="fig-layer-route" checked>
+              <span class="layer-color" style="background:#ff6600"></span>
+              <span class="layer-name">配線ルート図専用</span>
+            </div>
+            <div class="layer-item">
+              <input type="checkbox" id="fig-layer-shared" checked>
+              <span class="layer-color" style="background:#0066cc"></span>
+              <span class="layer-name">共通</span>
+            </div>
+          </div>
+          <div class="layer-item" style="margin-top:4px;padding-top:4px;border-top:1px dashed #ccc">
+            <input type="checkbox" id="fig-layer-boundary" checked>
+            <span class="layer-color" style="background:transparent;border:1.5px dashed #4a9eff"></span>
+            <span class="layer-name">出力範囲プレビュー</span>
+          </div>
+          <hr style="margin:6px 0;border:none;border-top:1px solid #ddd">
+          <div class="layer-list" id="layer-list">
+            <p class="placeholder-text">DXFファイルを読み込んでください</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- PDF参照 -->
+      <div class="panel-section" id="pdf-ref-section">
+        <h3 class="panel-title" data-collapse="pdf-ref-content">参照PDF</h3>
+        <div class="panel-content" id="pdf-ref-content">
+          <div id="pdf-thumbnails">
+            <p class="placeholder-text">下書きPDFを読み込んでください</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 補助金要件チェック -->
+      <div class="panel-section" id="checklist-section">
+        <h3 class="panel-title" data-collapse="checklist-content">補助金要件チェック</h3>
+        <div class="panel-content" id="checklist-content">
+          <span class="section-label" style="font-size:11px;color:#cc0000;display:block;margin-bottom:2px">【平面図】</span>
+          <ul class="checklist" id="checklist-plan">
+            <li data-req="basic-info"><span class="check-icon">○</span> ①図面基本情報</li>
+            <li data-req="space-dim"><span class="check-icon">○</span> ②充電スペース寸法</li>
+            <li data-req="equip-pos"><span class="check-icon">○</span> ③充電設備位置</li>
+            <li data-req="foundation"><span class="check-icon">○</span> ④充電設備基礎</li>
+            <li data-req="line-marking"><span class="check-icon">○</span> ⑤ライン引き</li>
+            <li data-req="road-marking"><span class="check-icon">○</span> ⑥路面表示</li>
+            <li data-req="roof"><span class="check-icon">-</span> ⑦屋根設置</li>
+            <li data-req="shed"><span class="check-icon">-</span> ⑧小屋設置</li>
+            <li data-req="bollard"><span class="check-icon">○</span> ⑨防護用部材</li>
+            <li data-req="wheel-stop"><span class="check-icon">○</span> ⑩車止め</li>
+            <li data-req="lighting"><span class="check-icon">○</span> ⑪電灯位置</li>
+            <li data-req="existing"><span class="check-icon">-</span> ⑫既設充電設備</li>
+          </ul>
+          <span class="section-label" style="font-size:11px;color:#ff6600;display:block;margin-top:8px;margin-bottom:2px">【配線ルート図】</span>
+          <ul class="checklist" id="checklist-route">
+            <li data-req="route-basic-info"><span class="check-icon">○</span> ①図面基本情報</li>
+            <li data-req="route-wiring"><span class="check-icon">○</span> ②配線ルート</li>
+            <li data-req="route-equipment"><span class="check-icon">○</span> ③キュービクル/分電盤/充電設備</li>
+            <li data-req="route-pole"><span class="check-icon">-</span> ④建柱（引込柱）</li>
+            <li data-req="route-handhole"><span class="check-icon">-</span> ⑤ハンドホール</li>
+            <li data-req="route-existing"><span class="check-icon">-</span> ⑥既設充電設備</li>
+            <li data-req="route-summary"><span class="check-icon">○</span> ⑦配線集計表</li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ステータスバー -->
+  <footer id="statusbar">
+    <span id="status-coords">X: 0 Y: 0</span>
+    <span id="status-scale">縮尺: 1/100</span>
+    <span id="status-snap">スナップ: ON</span>
+    <span id="status-tool">ツール: 選択</span>
+    <span id="status-figure-layer"></span>
+  </footer>
+
+  <!-- PDF参照モーダル -->
+  <div id="pdf-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="pdf-modal-title">参照PDF</h3>
+        <button class="modal-close" onclick="document.getElementById('pdf-modal').classList.add('hidden')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <canvas id="pdf-modal-canvas"></canvas>
+      </div>
+      <div class="modal-footer">
+        <button id="pdf-modal-prev">前ページ</button>
+        <span id="pdf-modal-page">1 / 1</span>
+        <button id="pdf-modal-next">次ページ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- スクリプト -->
+  <script src="lib/jspdf.umd.min.js"></script>
+  <script src="lib/svg2pdf.umd.min.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/dxf-parser.js"></script>
+  <script src="js/svg-engine.js"></script>
+  <script src="js/viewport.js"></script>
+  <script src="js/layer-manager.js"></script>
+  <script src="js/symbols.js"></script>
+  <script src="js/dimension-line.js"></script>
+  <script src="js/title-block.js"></script>
+  <script src="js/tool-manager.js"></script>
+  <script src="js/tools/select-tool.js"></script>
+  <script src="js/tools/charging-space-tool.js"></script>
+  <script src="js/tools/charger-tool.js"></script>
+  <script src="js/tools/dimension-tool.js"></script>
+  <script src="js/tools/road-marking-tool.js"></script>
+  <script src="js/tools/wheel-stop-tool.js"></script>
+  <script src="js/tools/text-tool.js"></script>
+  <script src="js/tools/leader-tool.js"></script>
+  <script src="js/tools/wiring-route-tool.js"></script>
+  <script src="js/figure-layer-manager.js"></script>
+  <script src="js/export-boundary.js"></script>
+  <script src="js/wiring-summary.js"></script>
+  <script src="js/pdf-viewer.js"></script>
+  <script src="js/pdf-auto-reader.js"></script>
+  <script src="js/pdf-exporter.js"></script>
+  <script src="js/dxf-exporter.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
