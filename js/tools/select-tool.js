@@ -504,7 +504,7 @@ class SelectTool {
       case 'pole':
         html += `
           <div class="form-group"><label>材質</label><input type="text" value="${element.dataset.material || ''}" data-prop="material" class="prop-input"></div>
-          <div class="form-group"><label>高さ</label><input type="text" value="${element.dataset.height || ''}" data-prop="height" class="prop-input"></div>`;
+          <div class="form-group"><label>高さ</label><input type="text" value="${element.dataset.poleHeight || ''}" data-prop="poleHeight" class="prop-input"></div>`;
         break;
       case 'pullbox':
         html += `
@@ -749,6 +749,13 @@ class SelectTool {
       this._rebuildFoundation(this.selected);
     }
 
+    // pole/cubicle/existing-charger はラベル等の編集をデータから作り直して反映（change=blur時）
+    if ((type === 'pole' && (prop === 'material' || prop === 'poleHeight')) ||
+        (type === 'cubicle' && prop === 'label') ||
+        (type === 'existing-charger' && prop === 'label')) {
+      this._regenerateSelected();
+    }
+
     // パネル編集を履歴に記録（フェーズ1: 重複スナップショットは updateChecklist 側で抑制）
     if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
   }
@@ -932,6 +939,26 @@ class SelectTool {
     lbl.textContent = `PB ${material} ${size}`;
     el.appendChild(lbl);
     this.svgEngine.showSelection(el);
+  }
+
+  // 選択要素を現在の data-* から作り直す（描画ロジックを二重化せず StateSerializer を再利用）。
+  // change(blur)時に呼ぶ前提。data-figure と id を保持し、新要素を選択し直す。
+  _regenerateSelected() {
+    const el = this.selected;
+    if (!el) return;
+    const type = el.dataset.type;
+    const rec = (typeof StateSerializer !== 'undefined') ? StateSerializer.recordFromDataset(type, el.dataset) : null;
+    const call = rec && StateSerializer.createCallFromRecord(rec);
+    if (!call || typeof this.svgEngine[call.method] !== 'function') return;
+    const figure = el.getAttribute('data-figure');
+    el.remove();
+    const newEl = this.svgEngine[call.method].apply(this.svgEngine, call.args);
+    if (newEl && figure) newEl.setAttribute('data-figure', figure);
+    this.selected = newEl || null;
+    if (newEl) {
+      this.svgEngine.showSelection(newEl);
+      this._showProperties(newEl);
+    }
   }
 
   // 外部（配置系ツール）から新規要素を選択してプロパティパネルを開く
