@@ -41,6 +41,7 @@ const RequirementValidator = {
         : (anyDimNear(byType['charging-space']) ? ok() : warn('充電スペースの幅・奥行きの寸法が見当たりません')),
       'equip-pos': !has('charger') ? missing('充電設備が未配置です')
         : (anyDimNear(byType['charger']) ? ok() : warn('充電スペースと充電設備の位置関係寸法が見当たりません')),
+      // foundation/line-marking は意図的に presence のみ判定（仕様の緩いフォールバック）
       'foundation': has('foundation') ? ok() : missing('充電設備の基礎が未配置です'),
       'line-marking': has('charging-space') ? ok() : missing('充電スペースのライン引きが未配置です'),
       'road-marking': !has('road-marking') ? missing('路面表示が未配置です')

@@ -184,7 +184,6 @@ body { display: flex; flex-direction: column; }
 ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #aaa; }
 
-
 /* 補助金要件チェック: 警告表示 */
 .checklist li.req-warn { color: #b8860b; }
 .checklist .req-msg { display: block; font-size: 10px; color: #b8860b; margin-left: 16px; line-height: 1.3; }

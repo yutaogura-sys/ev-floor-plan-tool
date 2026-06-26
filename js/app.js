@@ -472,11 +472,6 @@ class App {
     this._scheduleAutosave();
   }
 
-  _hasAnnotationType(type) {
-    const group = this.svgEngine.annotationLayer;
-    return group.querySelector(`[data-type="${type}"]`) !== null;
-  }
-
   // ===== 履歴（Undo/Redo） =====
   _bindHistoryControls() {
     const undoBtn = document.getElementById('btn-undo');
