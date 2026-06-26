@@ -12,7 +12,7 @@ class LeaderTool {
   activate() { this.firstPoint = null; }
   deactivate() { this.firstPoint = null; this._removePreview(); }
 
-  onMouseDown(point, e) {
+  async onMouseDown(point, e) {
     if (e.button !== 0) return;
 
     if (!this.firstPoint) {
@@ -20,23 +20,26 @@ class LeaderTool {
       this.firstPoint = { x: point.x, y: point.y };
       this._createPreview(point);
     } else {
-      // Second click: set text position, prompt for text
+      // Second click: set text position, ask for text via non-blocking modal
       this._removePreview();
-      const text = prompt(this.promptText + ':');
+      const target = this.firstPoint;
+      const textPos = { x: point.x, y: point.y };
+      this.firstPoint = null;
+      const text = await Utils.promptModal({ title: this.promptText, multiline: true });
       if (text && text.trim()) {
         const id = Utils.generateId();
         // Split multi-line input by newline or comma
         const lines = text.trim().split(/[,\n]/).map(s => s.trim()).filter(Boolean);
-        this.svgEngine.createLeaderAnnotation(
-          id,
-          this.firstPoint.x, this.firstPoint.y,
-          point.x, point.y,
-          lines,
-          this.color
+        const el = this.svgEngine.createLeaderAnnotation(
+          id, target.x, target.y, textPos.x, textPos.y, lines, this.color
         );
-        if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+        // 配置後は選択ツールへ戻り自動選択（全配置ツールで統一）
+        if (typeof app !== 'undefined') {
+          app.toolManager.setActiveTool('select');
+          app.toolManager.tools.select.selectElement(el);
+          if (app.updateChecklist) app.updateChecklist();
+        }
       }
-      this.firstPoint = null;
     }
   }
 
