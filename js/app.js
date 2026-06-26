@@ -259,6 +259,15 @@ class App {
     this.history = new History(50);
     this.history.reset(StateSerializer.snapshot(this.svgEngine));
     this._bindHistoryControls();
+
+    // 詳細ラベル表示トグル（OFFで説明系ラベルを画面上のみ非表示）
+    const detailToggle = document.getElementById('toggle-detail-labels');
+    if (detailToggle) {
+      detailToggle.addEventListener('change', () => {
+        this.svgElement.classList.toggle('labels-hidden', !detailToggle.checked);
+      });
+    }
+
     this._offerRestore();
 
     console.log('EV充電設備 平面図作成ツール initialized');
