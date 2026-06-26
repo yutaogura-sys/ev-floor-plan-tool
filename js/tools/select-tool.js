@@ -112,8 +112,15 @@ class SelectTool {
 
     const dx = point.x - this.dragStart.x;
     const dy = point.y - this.dragStart.y;
-    const newX = this.elementStart.x + dx;
-    const newY = this.elementStart.y + dy;
+    let newX = this.elementStart.x + dx;
+    let newY = this.elementStart.y + dy;
+
+    // スナップON時は移動先もグリッドへ吸着（配置と挙動を一貫させる）
+    const _tm = (typeof app !== 'undefined') ? app.toolManager : null;
+    if (_tm && _tm.snapEnabled && Utils.snapToGrid) {
+      newX = Utils.snapToGrid(newX, _tm.gridSize);
+      newY = Utils.snapToGrid(newY, _tm.gridSize);
+    }
 
     const type = this.selected.dataset.type;
 
@@ -133,7 +140,8 @@ class SelectTool {
       this.selected.dataset.x = newX;
       this.selected.dataset.y = newY;
     } else {
-      this.selected.setAttribute('transform', `translate(${dx},${dy})`);
+      // 絶対位置から平行移動量を算出（スナップ後も視覚とデータが一致する）
+      this.selected.setAttribute('transform', `translate(${newX - this.elementStart.x},${newY - this.elementStart.y})`);
       this.selected.dataset.x = newX;
       this.selected.dataset.y = newY;
     }

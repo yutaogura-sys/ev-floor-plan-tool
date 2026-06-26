@@ -470,18 +470,31 @@ class App {
       }
     }
 
-    // 要件充足の進捗バッジ（#C: na を除く適用項目のうち ok の数）
+    // 要件充足の進捗（#C: na を除く適用項目のうち ok の数）。全体＋図面別に集計。
+    const grp = { plan: { ok: 0, total: 0 }, route: { ok: 0, total: 0 } };
     let okN = 0, applicable = 0;
-    for (const res of Object.values(results)) {
+    for (const [req, res] of Object.entries(results)) {
       if (res.status === 'na') continue;
       applicable++;
-      if (res.status === 'ok') okN++;
+      const g = req.indexOf('route-') === 0 ? 'route' : 'plan';
+      grp[g].total++;
+      if (res.status === 'ok') { okN++; grp[g].ok++; }
     }
+    const progColor = (ok, total) => total === 0 ? '#888' : (ok === total ? '#2e7d32' : (ok === 0 ? '#c62828' : '#b07000'));
     const prog = document.getElementById('checklist-progress');
     if (prog) {
       prog.textContent = `${okN}/${applicable} 充足`;
-      prog.style.color = applicable === 0 ? '#888' : (okN === applicable ? '#2e7d32' : (okN === 0 ? '#c62828' : '#b07000'));
+      prog.style.color = progColor(okN, applicable);
     }
+    // 図面別の進捗（平面図／配線ルート図のどちらが未充足か一目で分かるように）
+    const setGroupProg = (id, g) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = `${g.ok}/${g.total}`;
+      el.style.color = progColor(g.ok, g.total);
+    };
+    setGroupProg('prog-plan', grp.plan);
+    setGroupProg('prog-route', grp.route);
 
     // 出力ボタンの有効化（#B: DXF読込だけでなく注釈が1件でもあれば有効。無ければ理由を title 表示）
     const hasContent = records.length > 0 || !!(this.state && this.state.dxfData);
