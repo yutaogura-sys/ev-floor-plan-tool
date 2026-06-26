@@ -11,13 +11,13 @@ Object.assign(SVGEngine.prototype, {
 
     group.appendChild(Utils.createSVGElement('rect', {
       x: x - width / 2, y: y - height / 2, width, height,
-      fill: 'rgba(0,153,51,0.05)', stroke: '#009933', 'stroke-width': S.strokeMedium
+      fill: 'rgba(0,153,51,0.05)', stroke: Utils.COLORS.green, 'stroke-width': S.strokeMedium
     }));
 
     // Label inside
     const lbl = Utils.createSVGElement('text', {
       x, y: y + S.fontSmall * 0.3, 'text-anchor': 'middle',
-      'font-size': S.fontSmall, fill: '#009933', 'font-family': 'Meiryo, sans-serif'
+      'font-size': S.fontSmall, fill: Utils.COLORS.green, 'font-family': 'Meiryo, sans-serif'
     });
     lbl.textContent = label;
     group.appendChild(lbl);
@@ -37,21 +37,21 @@ Object.assign(SVGEngine.prototype, {
     // Circle with cross
     group.appendChild(Utils.createSVGElement('circle', {
       cx: x, cy: y, r,
-      fill: 'rgba(102,51,0,0.1)', stroke: '#663300', 'stroke-width': S.strokeMedium
+      fill: 'rgba(102,51,0,0.1)', stroke: Utils.COLORS.brown, 'stroke-width': S.strokeMedium
     }));
     group.appendChild(Utils.createSVGElement('line', {
       x1: x - r, y1: y - r, x2: x + r, y2: y + r,
-      stroke: '#663300', 'stroke-width': S.strokeThin
+      stroke: Utils.COLORS.brown, 'stroke-width': S.strokeThin
     }));
     group.appendChild(Utils.createSVGElement('line', {
       x1: x + r, y1: y - r, x2: x - r, y2: y + r,
-      stroke: '#663300', 'stroke-width': S.strokeThin
+      stroke: Utils.COLORS.brown, 'stroke-width': S.strokeThin
     }));
 
     // Label below
     const lbl = Utils.createSVGElement('text', {
       x, y: y + r + S.fontSmall * 1.5, 'text-anchor': 'middle',
-      'font-size': S.fontSmall * 0.85, fill: '#663300', 'font-family': 'Meiryo, sans-serif',
+      'font-size': S.fontSmall * 0.85, fill: Utils.COLORS.brown, 'font-family': 'Meiryo, sans-serif',
       class: 'detail-label'
     });
     lbl.textContent = `建柱 ${material} H=${height}`;
@@ -109,13 +109,13 @@ Object.assign(SVGEngine.prototype, {
     const sz = 0.25; // Display size
     group.appendChild(Utils.createSVGElement('rect', {
       x: x - sz / 2, y: y - sz / 2, width: sz, height: sz,
-      fill: 'rgba(0,102,204,0.08)', stroke: '#0066cc', 'stroke-width': S.strokeMedium
+      fill: 'rgba(0,102,204,0.08)', stroke: Utils.COLORS.blue, 'stroke-width': S.strokeMedium
     }));
 
     // "PB" text inside
     const pbText = Utils.createSVGElement('text', {
       x, y: y + 0.03, 'text-anchor': 'middle',
-      'font-size': 0.09, fill: '#0066cc', 'font-weight': 'bold',
+      'font-size': 0.09, fill: Utils.COLORS.blue, 'font-weight': 'bold',
       'font-family': 'Meiryo, sans-serif'
     });
     pbText.textContent = 'PB';
@@ -124,7 +124,7 @@ Object.assign(SVGEngine.prototype, {
     // Label below
     const lbl = Utils.createSVGElement('text', {
       x, y: y + sz / 2 + S.fontSmall * 1.3, 'text-anchor': 'middle',
-      'font-size': S.fontSmall * 0.75, fill: '#0066cc', 'font-family': 'Meiryo, sans-serif',
+      'font-size': S.fontSmall * 0.75, fill: Utils.COLORS.blue, 'font-family': 'Meiryo, sans-serif',
       class: 'detail-label'
     });
     lbl.textContent = `PB ${material} ${size}`;
@@ -185,7 +185,7 @@ Object.assign(SVGEngine.prototype, {
       return this.addToGroup('wiring-routes-group', group);
     }
 
-    const routeColor = '#cc0000'; // Red — matches benchmark examples
+    const routeColor = Utils.COLORS.evRed; // Red — matches benchmark examples
     const methodStyles = {
       exposed: { dash: 'none', label: '露出' },
       buried:  { dash: `${0.3} ${0.15}`, label: '埋設' },
@@ -226,7 +226,7 @@ Object.assign(SVGEngine.prototype, {
       const dimLbl = Utils.createSVGElement('text', {
         x: mx + perpX, y: my + perpY,
         'text-anchor': 'middle', 'font-size': S.fontSmall * 0.7,
-        fill: '#0066cc', 'font-family': 'Meiryo, sans-serif',
+        fill: Utils.COLORS.blue, 'font-family': 'Meiryo, sans-serif',
         transform: `rotate(${textAngle}, ${mx + perpX}, ${my + perpY})`
       });
       dimLbl.textContent = Utils.formatDimension(lenMm);
@@ -272,7 +272,7 @@ Object.assign(SVGEngine.prototype, {
     const indent2 = 0.6;  // 管内/sub indent
     const colRight = 6.0; // right edge for length values
     const tableW = 7.0;
-    const textColor = '#009933'; // Green — matches benchmark annotation color
+    const textColor = Utils.COLORS.green; // Green — matches benchmark annotation color
 
     // Build hierarchical data: group by cableSpec
     const byCable = {};
@@ -350,7 +350,7 @@ Object.assign(SVGEngine.prototype, {
     const totalH = cy - y;
     group.appendChild(Utils.createSVGElement('rect', {
       x, y, width: tableW, height: totalH,
-      fill: 'none', stroke: '#333', 'stroke-width': S.strokeThin
+      fill: 'none', stroke: Utils.COLORS.ink, 'stroke-width': S.strokeThin
     }));
 
     // Horizontal separator after each cable header (optional: add dividers)
