@@ -495,6 +495,8 @@ class App {
       const records = StateSerializer.serializeAnnotations(this.svgEngine);
       results = RequirementValidator.validate(records, { titleBlockComplete: this.titleBlock.isComplete() });
     } catch (e) {
+      // 検証の障害が出力自体を妨げないよう続行するが、無言で握り潰さずログは残す
+      console.warn('出力前チェックの検証に失敗（出力は続行）:', e);
       return Promise.resolve(true);
     }
     const summary = RequirementValidator.summarizeForExport(results, group);
@@ -518,6 +520,12 @@ class App {
 
   // 確認ダイアログ（ReviewPanel と同様のオーバーレイ）。Promise<boolean> を返す。
   _confirmExportModal({ group, missing, warn }) {
+    // 多重表示を防ぐ（出力ボタン連打時など）
+    document.querySelectorAll('.export-check-overlay').forEach((e) => e.remove());
+    // 現状の label/message は固定文字列だが、将来動的値が混ざっても安全なよう HTML エスケープする
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+    ));
     return new Promise((resolve) => {
       const groupName = group === 'route' ? '配線ルート図' : '平面図';
       const overlay = document.createElement('div');
@@ -525,7 +533,7 @@ class App {
       overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10001;display:flex;align-items:center;justify-content:center;';
       const box = document.createElement('div');
       box.style.cssText = 'background:#fff;color:#222;max-width:480px;width:90%;max-height:80vh;overflow:auto;border-radius:8px;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,0.3);font-family:Meiryo,sans-serif;';
-      const li = (it) => `<li style="margin:4px 0;"><b>${it.label}</b>${it.message ? ' — ' + it.message : ''}</li>`;
+      const li = (it) => `<li style="margin:4px 0;"><b>${esc(it.label)}</b>${it.message ? ' — ' + esc(it.message) : ''}</li>`;
       let html = `<h3 style="margin:0 0 12px;font-size:16px;">${groupName}の出力前チェック</h3>`;
       if (missing.length) {
         html += `<p style="color:#c00;font-weight:bold;margin:8px 0 4px;">未充足の必須項目（${missing.length}）</p>`;

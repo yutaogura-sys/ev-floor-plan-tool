@@ -7,6 +7,9 @@ class SelectTool {
     this.isDragging = false;
     this.isScaling = false;
     this.isRotating = false;
+    this.isLabelDragging = false; // 詳細ラベルのドラッグ中（#4）
+    this.labelDragStart = null;
+    this.labelOffsetStart = null;
     this.dragStart = null;
     this.elementStart = null;
     this.scaleAnchor = null; // Opposite corner for scaling
@@ -73,8 +76,18 @@ class SelectTool {
   onMouseMove(point, e) {
     // 詳細ラベルのドラッグ（#4）
     if (this.isLabelDragging && this.selected) {
-      const ddx = point.x - this.labelDragStart.x;
-      const ddy = point.y - this.labelDragStart.y;
+      let ddx = point.x - this.labelDragStart.x;
+      let ddy = point.y - this.labelDragStart.y;
+      // グループに回転がある場合（充電スペース等）、ワールド差分をローカル軸へ逆回転変換する。
+      // ラベルはグループのローカル座標に置かれるため、回転しないとドラッグ方向がずれる。
+      const rot = parseFloat(this.selected.dataset.rotation || 0) || 0;
+      if (rot) {
+        const rad = rot * Math.PI / 180;
+        const c = Math.cos(rad), s = Math.sin(rad);
+        const lx = ddx * c + ddy * s;
+        const ly = -ddx * s + ddy * c;
+        ddx = lx; ddy = ly;
+      }
       this.selected.dataset.labelDx = this.labelOffsetStart.dx + ddx;
       this.selected.dataset.labelDy = this.labelOffsetStart.dy + ddy;
       this.svgEngine.applyLabelOffset(this.selected);

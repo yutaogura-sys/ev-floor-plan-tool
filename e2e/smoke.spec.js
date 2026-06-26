@@ -23,7 +23,7 @@ test('アプリが読み込まれ、コンソールエラーが無い', async ({
 });
 
 test('キーボードショートカットでツールが切り替わる（#6）', async ({ page }) => {
-  // 'c' は充電設備ツール。INPUT/TEXTAREA にフォーカスが無い状態で押下。
+  // INPUT/TEXTAREA にフォーカスが無い状態で単キーを押下（キャンバスへフォーカス）。
   await page.locator('#drawing-canvas').click({ position: { x: 5, y: 5 } });
   await page.keyboard.press('s'); // 充電スペース
   expect(await page.evaluate(() => app.toolManager.activeTool)).toBe('charging-space');

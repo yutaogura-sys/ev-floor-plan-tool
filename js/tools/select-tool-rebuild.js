@@ -206,8 +206,8 @@
       const newEl = this.svgEngine[call.method].apply(this.svgEngine, call.args);
       if (newEl && figure) newEl.setAttribute('data-figure', figure);
       if (newEl && (parseFloat(labelDx) || parseFloat(labelDy))) {
-        newEl.dataset.labelDx = labelDx;
-        newEl.dataset.labelDy = labelDy;
+        newEl.dataset.labelDx = labelDx || 0;
+        newEl.dataset.labelDy = labelDy || 0;
         this.svgEngine.applyLabelOffset(newEl);
       }
       this.selected = newEl || null;
