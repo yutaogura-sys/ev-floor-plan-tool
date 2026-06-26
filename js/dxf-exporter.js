@@ -88,31 +88,11 @@ class DXFExporter {
   }
 
   _computeBounds(dxfData, annotations) {
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
-    if (dxfData && dxfData.bounds) {
-      minX = dxfData.bounds.minX;
-      minY = dxfData.bounds.minY;
-      maxX = dxfData.bounds.maxX;
-      maxY = dxfData.bounds.maxY;
-    }
-
+    const points = [];
     annotations.forEach(ann => {
-      const x = parseFloat(ann.dataset.x);
-      const y = parseFloat(ann.dataset.y);
-      if (!isNaN(x) && !isNaN(y)) {
-        const dxfY = -y; // SVG Y → DXF Y
-        minX = Math.min(minX, x - 10);
-        maxX = Math.max(maxX, x + 10);
-        minY = Math.min(minY, dxfY - 10);
-        maxY = Math.max(maxY, dxfY + 10);
-      }
+      points.push({ x: parseFloat(ann.dataset.x), y: parseFloat(ann.dataset.y) });
     });
-
-    if (minX === Infinity) { minX = 0; minY = 0; maxX = 100; maxY = 100; }
-    // NaN/Infinity が紛れた場合のフォールバック（$EXTMIN/$EXTMAX に "NaN"/"Infinity" を出さない）
-    if (![minX, minY, maxX, maxY].every(Number.isFinite)) { minX = 0; minY = 0; maxX = 100; maxY = 100; }
-    return { minX, minY, maxX, maxY };
+    return DXFExporter.computeBoundsCore(dxfData && dxfData.bounds, points);
   }
 
   // ====== HEADER Section ======
@@ -315,14 +295,7 @@ class DXFExporter {
     const rot = parseFloat(el.dataset.rotation) || 0;
     const num = el.dataset.number || '';
 
-    const corners = [
-      { x: 0, y: 0 }, { x: w, y: 0 },
-      { x: w, y: h }, { x: 0, y: h }
-    ];
-    const dxfCorners = corners.map(c => {
-      const r = this._rotatePoint(c.x, c.y, 0, 0, rot);
-      return { x: x0 + r.x, y: -(y0 + r.y) };
-    });
+    const dxfCorners = DXFExporter.chargingSpaceCorners({ x: x0, y: y0, width: w, height: h, rotation: rot });
 
     let out = this._dxfPolyline(layer, aci, dxfCorners, true);
 
@@ -793,7 +766,10 @@ class DXFExporter {
 
   // ====== Utilities ======
 
-  _rotatePoint(px, py, cx, cy, angleDeg) {
+  // ---- 純関数（DOM非依存・Nodeテスト可能。静的版を真実の源とし、インスタンス側は委譲） ----
+
+  // 点 (px,py) を (cx,cy) を中心に angleDeg 度回転
+  static rotatePoint(px, py, cx, cy, angleDeg) {
     const rad = angleDeg * Math.PI / 180;
     const cos = Math.cos(rad);
     const sin = Math.sin(rad);
@@ -802,7 +778,40 @@ class DXFExporter {
     return { x: cx + dx * cos - dy * sin, y: cy + dx * sin + dy * cos };
   }
 
-  _cssColorToACI(cssColor) {
+  // 充電スペースの4隅をDXF座標で返す。(x,y)=矩形左上角=回転中心、ローカル(0,0)-(w,h)を
+  // 原点まわりで回転→(x,y)へ平行移動→DXFのY反転。createChargingSpace の幾何と一致させる。
+  static chargingSpaceCorners(o) {
+    const x0 = o.x, y0 = o.y, w = o.width, h = o.height, rot = o.rotation || 0;
+    const local = [{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: h }, { x: 0, y: h }];
+    return local.map((c) => {
+      const r = DXFExporter.rotatePoint(c.x, c.y, 0, 0, rot);
+      return { x: x0 + r.x, y: -(y0 + r.y) };
+    });
+  }
+
+  // 図面範囲の数値集約（DOM非依存）。dxfBounds（無ければnull）と注釈点[{x,y}]（SVG座標）から
+  // DXF範囲を求める。空なら既定枠、NaN/Infinity が紛れたらフォールバック。
+  static computeBoundsCore(dxfBounds, points) {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    if (dxfBounds) {
+      minX = dxfBounds.minX; minY = dxfBounds.minY;
+      maxX = dxfBounds.maxX; maxY = dxfBounds.maxY;
+    }
+    (points || []).forEach((p) => {
+      const x = p.x, y = p.y;
+      if (!isNaN(x) && !isNaN(y)) {
+        const dxfY = -y; // SVG Y → DXF Y
+        minX = Math.min(minX, x - 10); maxX = Math.max(maxX, x + 10);
+        minY = Math.min(minY, dxfY - 10); maxY = Math.max(maxY, dxfY + 10);
+      }
+    });
+    if (minX === Infinity) { minX = 0; minY = 0; maxX = 100; maxY = 100; }
+    if (![minX, minY, maxX, maxY].every(Number.isFinite)) { minX = 0; minY = 0; maxX = 100; maxY = 100; }
+    return { minX, minY, maxX, maxY };
+  }
+
+  // CSS色 → AutoCAD カラーインデックス(ACI)
+  static colorToACI(cssColor) {
     const c = (cssColor || '').toLowerCase();
     const map = {
       '#cc0000': 1, '#ff0000': 1, 'red': 1,
@@ -814,6 +823,14 @@ class DXFExporter {
       '#999': 9, '#999999': 9, '#ccc': 253, '#cccccc': 253
     };
     return map[c] || 7;
+  }
+
+  _rotatePoint(px, py, cx, cy, angleDeg) {
+    return DXFExporter.rotatePoint(px, py, cx, cy, angleDeg);
+  }
+
+  _cssColorToACI(cssColor) {
+    return DXFExporter.colorToACI(cssColor);
   }
 
   _layerNameForType(dataType) {
@@ -839,4 +856,9 @@ class DXFExporter {
     };
     return map[dataType] || 'EV_MISC';
   }
+}
+
+// ブラウザ/Node 両対応（静的純関数のユニットテスト用）
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = DXFExporter;
 }

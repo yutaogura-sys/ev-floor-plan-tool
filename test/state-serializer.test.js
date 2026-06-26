@@ -87,3 +87,67 @@ test('recordFromDataset: オフセット0/未設定は labelDx/labelDy キーを
   const none = StateSerializer.recordFromDataset('foundation', { id: 'a2', type: 'foundation', x: '0', y: '0', width: '1', height: '1', depth: '0.5', material: 'X' });
   assert.strictEqual('labelDx' in none, false);
 });
+
+// ===== deserializeAnnotations の往復（フェイク svgEngine で復元経路を検証） =====
+function makeFakeEngine(opts = {}) {
+  const eng = { cleared: 0, calls: [], offsets: [] };
+  eng.clearAnnotations = function () { this.cleared++; };
+  eng.applyLabelOffset = function (el) { this.offsets.push(el); el._offsetApplied = true; };
+  const mk = (name) => function (...args) {
+    if (opts.throwOn === name) throw new Error('boom ' + name);
+    const el = { dataset: {}, _attrs: {}, _method: name, _args: args,
+      setAttribute(k, v) { this._attrs[k] = String(v); } };
+    eng.calls.push({ method: name, args, el });
+    return el;
+  };
+  // 必要な create メソッドのみ用意（createPole は意図的に省略＝「メソッド欠落でskip」検証用）
+  eng.createChargingSpace = mk('createChargingSpace');
+  eng.createFoundation = mk('createFoundation');
+  return eng;
+}
+
+test('deserializeAnnotations: 型・引数・figure・labelDx を復元し applyLabelOffset を呼ぶ', () => {
+  const eng = makeFakeEngine();
+  const recs = [
+    { type: 'charging-space', id: 'a1', x: 0, y: 0, width: 2.5, height: 5, number: '①', rotation: 0, labelDx: 1.5, labelDy: -0.8, figure: 'plan' },
+    { type: 'foundation', id: 'a2', x: 1, y: 1, width: 1, height: 1, depth: 0.5, material: 'X' }
+  ];
+  const res = StateSerializer.deserializeAnnotations(eng, recs);
+  assert.strictEqual(eng.cleared, 1);
+  assert.deepStrictEqual(res, { restored: 2, skipped: 0 });
+
+  const a1 = eng.calls.find((c) => c.args[0] === 'a1');
+  assert.strictEqual(a1.method, 'createChargingSpace');
+  // 引数順 [id,x,y,width,height,number,rotation]
+  assert.deepStrictEqual(a1.args, ['a1', 0, 0, 2.5, 5, '①', 0]);
+  assert.strictEqual(a1.el._attrs['data-figure'], 'plan');
+  assert.strictEqual(Number(a1.el.dataset.labelDx), 1.5);
+  assert.strictEqual(Number(a1.el.dataset.labelDy), -0.8);
+  assert.strictEqual(a1.el._offsetApplied, true);
+
+  // オフセットの無い a2 には applyLabelOffset を呼ばない
+  const a2 = eng.calls.find((c) => c.args[0] === 'a2');
+  assert.strictEqual(a2.el._offsetApplied, undefined);
+});
+
+test('deserializeAnnotations: 未知タイプ/欠落メソッドは throw せず skipped に計上', () => {
+  const eng = makeFakeEngine();
+  const res = StateSerializer.deserializeAnnotations(eng, [
+    { type: 'charging-space', id: 'ok', x: 0, y: 0, width: 2.5, height: 5, number: '①', rotation: 0 },
+    { type: 'totally-unknown', id: 'u1' },                 // SCHEMA に無い → skip
+    { type: 'pole', id: 'p1', x: 0, y: 0, material: 'X', poleHeight: '8m' } // createPole 未実装 → skip
+  ]);
+  assert.strictEqual(res.restored, 1);
+  assert.strictEqual(res.skipped, 2);
+});
+
+test('deserializeAnnotations: create が throw しても握って skipped、後続は継続', () => {
+  const eng = makeFakeEngine({ throwOn: 'createFoundation' });
+  const res = StateSerializer.deserializeAnnotations(eng, [
+    { type: 'foundation', id: 'bad', x: 0, y: 0, width: 1, height: 1, depth: 0.5, material: 'X' },
+    { type: 'charging-space', id: 'good', x: 0, y: 0, width: 2.5, height: 5, number: '①', rotation: 0 }
+  ]);
+  assert.strictEqual(res.skipped, 1);
+  assert.strictEqual(res.restored, 1);
+  assert.ok(eng.calls.find((c) => c.args[0] === 'good'));
+});

@@ -470,6 +470,28 @@ class App {
       }
     }
 
+    // 要件充足の進捗バッジ（#C: na を除く適用項目のうち ok の数）
+    let okN = 0, applicable = 0;
+    for (const res of Object.values(results)) {
+      if (res.status === 'na') continue;
+      applicable++;
+      if (res.status === 'ok') okN++;
+    }
+    const prog = document.getElementById('checklist-progress');
+    if (prog) {
+      prog.textContent = `${okN}/${applicable} 充足`;
+      prog.style.color = applicable === 0 ? '#888' : (okN === applicable ? '#2e7d32' : (okN === 0 ? '#c62828' : '#b07000'));
+    }
+
+    // 出力ボタンの有効化（#B: DXF読込だけでなく注釈が1件でもあれば有効。無ければ理由を title 表示）
+    const hasContent = records.length > 0 || !!(this.state && this.state.dxfData);
+    ['btn-export-plan', 'btn-export-route', 'btn-export-plan-dxf', 'btn-export-route-dxf'].forEach((id) => {
+      const b = document.getElementById(id);
+      if (!b) return;
+      b.disabled = !hasContent;
+      b.title = hasContent ? '' : 'DXFを読み込むか注釈を配置すると出力できます';
+    });
+
     // Update export boundary preview when annotations change
     if (this.exportBoundary) {
       this.exportBoundary.update();
