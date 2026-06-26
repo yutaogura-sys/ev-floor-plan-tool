@@ -563,6 +563,16 @@ class App {
     return clone.textContent.trim();
   }
 
+  // モーダルのアクセシビリティ付与: role/aria・Escapeで閉じる・主要素にフォーカス。
+  _a11yModal(overlay, focusEl, onEscape) {
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    if (focusEl) { try { focusEl.focus(); } catch (e) { /* noop */ } }
+    overlay.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); if (onEscape) onEscape(); }
+    });
+  }
+
   // 確認ダイアログ（ReviewPanel と同様のオーバーレイ）。Promise<boolean> を返す。
   _confirmExportModal({ group, missing, warn }) {
     // 多重表示を防ぐ（出力ボタン連打時など）。直前モーダルはキャンセル扱いで解決してから差し替える
@@ -604,6 +614,7 @@ class App {
       box.querySelector('.ec-cancel').addEventListener('click', () => close(false));
       box.querySelector('.ec-proceed').addEventListener('click', () => close(true));
       overlay.addEventListener('click', (e) => { if (e.target === overlay) close(false); });
+      this._a11yModal(overlay, box.querySelector('.ec-cancel'), () => close(false));
     });
   }
 
@@ -686,6 +697,7 @@ class App {
     const close = () => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); };
     boxEl.querySelector('.qc-close').addEventListener('click', close);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    this._a11yModal(overlay, boxEl.querySelector('.qc-close'), close);
   }
 
   // ===== 履歴（Undo/Redo） =====
@@ -862,6 +874,8 @@ class App {
       // 破棄したら古い自動保存を消し、次回起動時に再度尋ねない
       try { localStorage.removeItem('ev-floorplan-autosave'); } catch (e) { /* ignore */ }
     });
+    // Escape は自動保存を消さずに閉じる（誤操作での消失防止）。主ボタン(復元)にフォーカス。
+    this._a11yModal(overlay, box.querySelector('.rs-restore'), close);
   }
 }
 
