@@ -160,12 +160,12 @@ class App {
     // Bind file inputs
     this._bindFileInputs();
 
-    // Bind dual export buttons (PDF)
-    document.getElementById('btn-export-plan').addEventListener('click', () => {
-      this.pdfExporter.exportPDF('plan');
+    // Bind dual export buttons (PDF) — 出力前に要件チェック（#2）
+    document.getElementById('btn-export-plan').addEventListener('click', async () => {
+      if (await this._checkBeforeExport('plan')) this.pdfExporter.exportPDF('plan');
     });
-    document.getElementById('btn-export-route').addEventListener('click', () => {
-      this.pdfExporter.exportPDF('route');
+    document.getElementById('btn-export-route').addEventListener('click', async () => {
+      if (await this._checkBeforeExport('route')) this.pdfExporter.exportPDF('route');
     });
 
     // Bind DXF export buttons
@@ -484,6 +484,67 @@ class App {
       }
     }
     this._scheduleAutosave();
+  }
+
+  // ===== 出力前要件チェック（#2） =====
+  // 対象グループ(plan|route)の必須未充足/確認推奨があれば確認ダイアログを表示。
+  // 戻り値 Promise<boolean>（true=出力続行 / false=中止）。検証失敗時は妨げない。
+  _checkBeforeExport(group) {
+    let results;
+    try {
+      const records = StateSerializer.serializeAnnotations(this.svgEngine);
+      results = RequirementValidator.validate(records, { titleBlockComplete: this.titleBlock.isComplete() });
+    } catch (e) {
+      return Promise.resolve(true);
+    }
+    const summary = RequirementValidator.summarizeForExport(results, group);
+    if (summary.missing.length === 0 && summary.warn.length === 0) return Promise.resolve(true);
+    const toItem = (id) => ({ label: this._reqLabel(id), message: (results[id] && results[id].message) || '' });
+    return this._confirmExportModal({
+      group,
+      missing: summary.missing.map(toItem),
+      warn: summary.warn.map(toItem)
+    });
+  }
+
+  // チェックリストの <li data-req> から人間可読ラベルを取得（アイコン/メッセージ除去）
+  _reqLabel(id) {
+    const li = document.querySelector('[data-req="' + id + '"]');
+    if (!li) return id;
+    const clone = li.cloneNode(true);
+    clone.querySelectorAll('.check-icon, .req-msg').forEach((e) => e.remove());
+    return clone.textContent.trim();
+  }
+
+  // 確認ダイアログ（ReviewPanel と同様のオーバーレイ）。Promise<boolean> を返す。
+  _confirmExportModal({ group, missing, warn }) {
+    return new Promise((resolve) => {
+      const groupName = group === 'route' ? '配線ルート図' : '平面図';
+      const overlay = document.createElement('div');
+      overlay.className = 'export-check-overlay';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10001;display:flex;align-items:center;justify-content:center;';
+      const box = document.createElement('div');
+      box.style.cssText = 'background:#fff;color:#222;max-width:480px;width:90%;max-height:80vh;overflow:auto;border-radius:8px;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,0.3);font-family:Meiryo,sans-serif;';
+      const li = (it) => `<li style="margin:4px 0;"><b>${it.label}</b>${it.message ? ' — ' + it.message : ''}</li>`;
+      let html = `<h3 style="margin:0 0 12px;font-size:16px;">${groupName}の出力前チェック</h3>`;
+      if (missing.length) {
+        html += `<p style="color:#c00;font-weight:bold;margin:8px 0 4px;">未充足の必須項目（${missing.length}）</p>`;
+        html += `<ul style="margin:0 0 8px;padding-left:20px;color:#c00;">${missing.map(li).join('')}</ul>`;
+      }
+      if (warn.length) {
+        html += `<p style="color:#b07000;font-weight:bold;margin:8px 0 4px;">確認推奨（${warn.length}）</p>`;
+        html += `<ul style="margin:0 0 12px;padding-left:20px;color:#b07000;">${warn.map(li).join('')}</ul>`;
+      }
+      html += `<p style="font-size:13px;color:#555;margin:8px 0 16px;">このまま出力できますが、補助金要件を満たさない可能性があります。</p>`;
+      html += `<div style="display:flex;gap:8px;justify-content:flex-end;"><button class="ec-cancel" style="padding:8px 16px;border:1px solid #999;border-radius:4px;background:#f2f2f2;cursor:pointer;">キャンセル</button><button class="ec-proceed" style="padding:8px 16px;border:none;border-radius:4px;background:#1a6ed8;color:#fff;cursor:pointer;">このまま出力</button></div>`;
+      box.innerHTML = html;
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+      const close = (val) => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); resolve(val); };
+      box.querySelector('.ec-cancel').addEventListener('click', () => close(false));
+      box.querySelector('.ec-proceed').addEventListener('click', () => close(true));
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) close(false); });
+    });
   }
 
   // ===== 履歴（Undo/Redo） =====
