@@ -49,9 +49,14 @@ class ChargingSpaceTool {
 
     this.spaceCounter++;
     const id = Utils.generateId();
-    this.svgEngine.createChargingSpace(id, x, y, w, h, this.spaceCounter);
+    const el = this.svgEngine.createChargingSpace(id, x, y, w, h, this.spaceCounter);
 
-    if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+    // 配置後は選択ツールへ戻り、置いた要素を自動選択（全配置ツールで統一）
+    if (typeof app !== 'undefined') {
+      app.toolManager.setActiveTool('select');
+      app.toolManager.tools.select.selectElement(el);
+      if (app.updateChecklist) app.updateChecklist();
+    }
   }
 
   _createPreview(x, y) {

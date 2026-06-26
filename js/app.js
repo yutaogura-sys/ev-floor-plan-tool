@@ -86,8 +86,12 @@ class App {
       onMouseDown(point, e) {
         if (e.button !== 0) return;
         const id = Utils.generateId();
-        this.svgEngine.createHandhole(id, point.x, point.y);
-        if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+        const el = this.svgEngine.createHandhole(id, point.x, point.y);
+        if (typeof app !== 'undefined') {
+          app.toolManager.setActiveTool('select');
+          app.toolManager.tools.select.selectElement(el);
+          if (app.updateChecklist) app.updateChecklist();
+        }
       }
     });
     this.toolManager.registerTool('pullbox', {
@@ -130,8 +134,12 @@ class App {
         if (e.button !== 0) return;
         const id = Utils.generateId();
         // Default: 500x500x500mm = 0.5x0.5x0.5 in DXF units
-        this.svgEngine.createFoundation(id, point.x, point.y, 0.5, 0.5, 0.5, 'コンクリート');
-        if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+        const el = this.svgEngine.createFoundation(id, point.x, point.y, 0.5, 0.5, 0.5, 'コンクリート');
+        if (typeof app !== 'undefined') {
+          app.toolManager.setActiveTool('select');
+          app.toolManager.tools.select.selectElement(el);
+          if (app.updateChecklist) app.updateChecklist();
+        }
       }
     });
 
@@ -141,8 +149,12 @@ class App {
       onMouseDown(point, e) {
         if (e.button !== 0) return;
         const id = Utils.generateId();
-        this.svgEngine.createBollard(id, point.x, point.y);
-        if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+        const el = this.svgEngine.createBollard(id, point.x, point.y);
+        if (typeof app !== 'undefined') {
+          app.toolManager.setActiveTool('select');
+          app.toolManager.tools.select.selectElement(el);
+          if (app.updateChecklist) app.updateChecklist();
+        }
       }
     });
 
@@ -152,8 +164,12 @@ class App {
       onMouseDown(point, e) {
         if (e.button !== 0) return;
         const id = Utils.generateId();
-        this.svgEngine.createLighting(id, point.x, point.y);
-        if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+        const el = this.svgEngine.createLighting(id, point.x, point.y);
+        if (typeof app !== 'undefined') {
+          app.toolManager.setActiveTool('select');
+          app.toolManager.tools.select.selectElement(el);
+          if (app.updateChecklist) app.updateChecklist();
+        }
       }
     });
 
