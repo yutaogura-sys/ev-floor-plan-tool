@@ -186,11 +186,7 @@ class ToolManager {
         e.preventDefault();
       }
 
-      // Ctrl+Z undo
-      if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {
-        if (app && app.undo) app.undo();
-        e.preventDefault();
-      }
+      // Undo/Redo は app.js の keydown（doUndo/doRedo、入力欄ガード付き）が担う
     });
   }
 }
