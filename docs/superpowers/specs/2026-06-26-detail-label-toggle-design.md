@@ -52,7 +52,7 @@
    </div>
    ```
 4. **トグル配線**: `app.js` で `#toggle-detail-labels` の change を購読し、`#drawing-canvas` に `labels-hidden` クラスを付け外し（checked=表示=クラス無し、unchecked=非表示=クラス付与）。
-5. **PDF出力時の保証**: `pdf-exporter.js` の出力処理の冒頭で `#drawing-canvas` の `labels-hidden` を一時的に外し、出力完了（同期/Promise後）に元の状態へ戻す。これにより画面でOFFでもPDFには全ラベルが入る。DXF出力（`dxf-exporter.js`）は `data-*` から再構成するため影響なし（変更不要）。
+5. **PDF出力時の保証**: `pdf-exporter.js` は出力用に `#drawing-canvas` を `cloneNode(true)` でクローンしてから加工する（`_prepareSVGString`）。クローン生成直後に `clone.classList.remove('labels-hidden')` を行い、画面トグルの状態によらずPDFには全ラベルが入るようにする。実キャンバスには触れない（ちらつき・復元処理が不要で例外安全）。DXF出力（`dxf-exporter.js`）は `data-*` から再構成するため影響なし（変更不要）。
 
 ### コンポーネント境界
 - 表示制御はCSSクラス1つに集約（JSは class の付け外しのみ）。レイアウト計算なし＝低リスク。
@@ -61,7 +61,7 @@
 
 ## 4. エラーハンドリング / エッジ
 - トグル要素やキャンバスが見つからない場合はガードして無視（既存の `if (el)` 慣習に倣う）。
-- PDF出力時の一時解除は try/finally 相当で必ず復元（例外時も元の表示状態に戻す）。
+- PDF出力はクローンに対して `labels-hidden` を除去するため、実キャンバスの状態に依存せず常に全ラベルを含む（復元処理不要・例外安全）。
 
 ## 5. テスト方針
 - ロジックが薄くDOM/CSS中心のため、純ユニットテストは追加しない（既存45件の非回帰のみ確認）。
