@@ -521,6 +521,18 @@ class SelectTool {
           <div class="form-group"><label>ラベル</label><input type="text" value="${element.dataset.label || ''}" data-prop="label" class="prop-input"></div>
           <div class="form-group"><label>回転角度</label><input type="number" value="${element.dataset.rotation || 0}" data-prop="rotation" class="prop-input"></div>`;
         break;
+      case 'foundation': {
+        const fw = Math.round(parseFloat(element.dataset.width) * 1000);
+        const fh = Math.round(parseFloat(element.dataset.height) * 1000);
+        const fd = Math.round(parseFloat(element.dataset.depth || 0.5) * 1000);
+        const fmat = element.dataset.material || 'コンクリート';
+        html += `
+          <div class="form-group"><label>たて (mm)</label><input type="number" value="${fw}" data-prop="width" class="prop-input"></div>
+          <div class="form-group"><label>よこ (mm)</label><input type="number" value="${fh}" data-prop="height" class="prop-input"></div>
+          <div class="form-group"><label>高さ (mm)</label><input type="number" value="${fd}" data-prop="depth" class="prop-input"></div>
+          <div class="form-group"><label>材質</label><input type="text" value="${fmat}" data-prop="material" class="prop-input"></div>`;
+        break;
+      }
       default:
         html += `<p>位置: (${Math.round(parseFloat(element.dataset.x) * 1000)}, ${Math.round(parseFloat(element.dataset.y) * -1000)})</p>`;
     }
@@ -726,6 +738,14 @@ class SelectTool {
       this._rebuildBoundaryRect(this.selected);
     }
 
+    // Rebuild foundation when dimensions/material change
+    if (type === 'foundation' && (prop === 'width' || prop === 'height' || prop === 'depth' || prop === 'material')) {
+      if (prop === 'width') this.selected.dataset.width = parseFloat(value) / 1000;
+      else if (prop === 'height') this.selected.dataset.height = parseFloat(value) / 1000;
+      else if (prop === 'depth') this.selected.dataset.depth = parseFloat(value) / 1000;
+      this._rebuildFoundation(this.selected);
+    }
+
     // パネル編集を履歴に記録（フェーズ1: 重複スナップショットは updateChecklist 側で抑制）
     if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
   }
@@ -758,6 +778,37 @@ class SelectTool {
     dimLabel.textContent = `幅${w.toFixed(2)}m×奥行${h.toFixed(1)}m`;
     el.appendChild(dimLabel);
     this.svgEngine.showSelection(el);
+  }
+
+  _rebuildFoundation(el) {
+    const S = this.svgEngine.S;
+    const x = parseFloat(el.dataset.x);
+    const y = parseFloat(el.dataset.y);
+    const width = parseFloat(el.dataset.width);
+    const height = parseFloat(el.dataset.height);
+    const depth = parseFloat(el.dataset.depth || 0.5);
+    const material = el.dataset.material || 'コンクリート';
+    while (el.firstChild) el.removeChild(el.firstChild);
+    el.appendChild(Utils.createSVGElement('rect', {
+      x: x - width / 2, y: y - height / 2, width, height,
+      fill: 'rgba(200,200,200,0.2)', stroke: '#333', 'stroke-width': S.strokeMedium
+    }));
+    el.appendChild(Utils.createSVGElement('line', {
+      x1: x - width / 2, y1: y - height / 2, x2: x + width / 2, y2: y + height / 2,
+      stroke: '#999', 'stroke-width': S.strokeThin
+    }));
+    el.appendChild(Utils.createSVGElement('line', {
+      x1: x + width / 2, y1: y - height / 2, x2: x - width / 2, y2: y + height / 2,
+      stroke: '#999', 'stroke-width': S.strokeThin
+    }));
+    const wMm = Math.round(width * 1000), hMm = Math.round(height * 1000), dMm = Math.round(depth * 1000);
+    const lbl = Utils.createSVGElement('text', {
+      x, y: y + height / 2 + S.fontSmall * 1.5,
+      'text-anchor': 'middle', 'font-size': S.fontSmall * 0.85,
+      fill: '#333', 'font-family': 'Meiryo, sans-serif'
+    });
+    lbl.textContent = `充電設備基礎 ${material} ${wMm}×${hMm}×${dMm}`;
+    el.appendChild(lbl);
   }
 
   _rebuildTextAnnotation(el, newText) {
