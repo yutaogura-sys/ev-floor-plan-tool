@@ -68,23 +68,23 @@ const Utils = {
   // Default scale factor
   SCALE: 100, // 1:100
 
-  // Colors for layers and elements
+  // 色の単一の真実の源（SSOT）。値は現行レンダリングと一致させており、各モジュールは
+  // 段階的にこの定数を参照するよう移行する（リテラル散在の解消）。
   COLORS: {
+    // 下図レイヤー（svg-engine の _layerColors で使用）
     road: '#888888',
     building: '#333333',
     structure: '#666666',
     center: '#cccccc',
-    chargingSpace: '#0066cc',
-    charger: '#cc0000',
-    dimension: '#333333',
-    roadMarking: '#009933',
-    wheelStop: '#333333',
-    bollard: '#666666',
-    lighting: '#cc6600',
-    foundation: '#333333',
-    text: '#333333',
-    selection: '#4a9eff',
-    titleBlock: '#333333'
+    // 注釈/要素の意味色（実際の描画値に一致）
+    evRed: '#cc0000',   // 充電器・充電スペース枠・EVマーク・配線ルート 等
+    green: '#009933',   // 路面表示・引き出し線 等
+    blue: '#0066cc',    // 寸法・プルボックス・囲み線 等
+    brown: '#663300',   // 配管注記
+    ink: '#333',        // 基礎・テキスト・寸法本体 等の濃灰
+    orange: '#cc6600',  // 電灯
+    gray: '#666666',
+    selection: '#4a9eff'
   },
 
   // Point in rect test

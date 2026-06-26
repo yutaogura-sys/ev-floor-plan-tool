@@ -48,10 +48,10 @@ class SVGEngine {
       'ROAD': Utils.COLORS.road, 'BUILDING': Utils.COLORS.building,
       'STRUCTURE': Utils.COLORS.structure, 'CENTER': Utils.COLORS.center, '0': '#777',
       // EV annotation layers (for re-imported DXF)
-      'EV_CHARGING_SPACE': '#cc0000', 'EV_CHARGER': '#cc0000',
-      'EV_DIMENSION': '#0066cc', 'EV_ANNOTATION': '#0066cc',
-      'EV_ROAD_MARKING': '#009933', 'EV_WHEEL_STOP': '#555',
-      'EV_FOUNDATION': '#333', 'EV_TEXT': '#333',
+      'EV_CHARGING_SPACE': Utils.COLORS.evRed, 'EV_CHARGER': Utils.COLORS.evRed,
+      'EV_DIMENSION': Utils.COLORS.blue, 'EV_ANNOTATION': Utils.COLORS.blue,
+      'EV_ROAD_MARKING': Utils.COLORS.green, 'EV_WHEEL_STOP': '#555',
+      'EV_FOUNDATION': Utils.COLORS.ink, 'EV_TEXT': Utils.COLORS.ink,
       'EV_WIRING_ROUTE': '#ff6600', 'EV_CUBICLE': '#ff6600',
       'EV_POLE': '#ff6600', 'EV_HANDHOLE': '#ff6600'
     };
@@ -321,7 +321,7 @@ class SVGEngine {
     // Red solid rectangle (local coords: 0,0 to width,height)
     group.appendChild(Utils.createSVGElement('rect', {
       x: 0, y: 0, width, height,
-      fill: 'rgba(204,0,0,0.03)', stroke: '#cc0000',
+      fill: 'rgba(204,0,0,0.03)', stroke: Utils.COLORS.evRed,
       'stroke-width': S.strokeMedium
     }));
 
@@ -329,7 +329,7 @@ class SVGEngine {
     const label = Utils.createSVGElement('text', {
       x: width / 2, y: height / 2 - S.fontSmall * 0.5,
       'text-anchor': 'middle', 'font-size': S.fontSmall,
-      fill: '#cc0000', 'font-family': 'Meiryo, sans-serif'
+      fill: Utils.COLORS.evRed, 'font-family': 'Meiryo, sans-serif'
     });
     label.textContent = `【充電スペース${number}】`;
     group.appendChild(label);
@@ -337,7 +337,7 @@ class SVGEngine {
     const dimLabel = Utils.createSVGElement('text', {
       x: width / 2, y: height / 2 + S.fontSmall * 1.2,
       'text-anchor': 'middle', 'font-size': S.fontSmall * 0.85,
-      fill: '#cc0000', 'font-family': 'Meiryo, sans-serif',
+      fill: Utils.COLORS.evRed, 'font-family': 'Meiryo, sans-serif',
       class: 'detail-label'
     });
     dimLabel.textContent = `幅${width.toFixed(2)}m×奥行${height.toFixed(1)}m`;
@@ -360,29 +360,29 @@ class SVGEngine {
     const w = 0.4, h = 0.3;
     group.appendChild(Utils.createSVGElement('rect', {
       x: -w / 2, y: -h / 2, width: w, height: h,
-      fill: 'none', stroke: '#cc0000', 'stroke-width': S.strokeMedium
+      fill: 'none', stroke: Utils.COLORS.evRed, 'stroke-width': S.strokeMedium
     }));
 
     // Front indicator arrow (pointing up)
     const arrowH = 0.12;
     group.appendChild(Utils.createSVGElement('path', {
       d: `M0,${-h / 2 - arrowH} L-${arrowH * 0.6},${-h / 2 - 0.01} L${arrowH * 0.6},${-h / 2 - 0.01} Z`,
-      fill: '#cc0000', stroke: 'none'
+      fill: Utils.COLORS.evRed, stroke: 'none'
     }));
 
     // Dual plugs
     const pr = 0.04;
     group.appendChild(Utils.createSVGElement('circle', {
-      cx: -0.08, cy: -0.02, r: pr, fill: '#cc0000'
+      cx: -0.08, cy: -0.02, r: pr, fill: Utils.COLORS.evRed
     }));
     group.appendChild(Utils.createSVGElement('circle', {
-      cx: 0.08, cy: -0.02, r: pr, fill: '#0066cc'
+      cx: 0.08, cy: -0.02, r: pr, fill: Utils.COLORS.blue
     }));
 
     // EV text inside
     const evText = Utils.createSVGElement('text', {
       x: 0, y: h / 2 - 0.02, 'text-anchor': 'middle',
-      'font-size': 0.1, fill: '#cc0000', 'font-weight': 'bold'
+      'font-size': 0.1, fill: Utils.COLORS.evRed, 'font-weight': 'bold'
     });
     evText.textContent = 'EV';
     group.appendChild(evText);
@@ -392,7 +392,7 @@ class SVGEngine {
       const labelEl = Utils.createSVGElement('text', {
         x: 0, y: h / 2 + S.fontSmall * 1.5,
         'text-anchor': 'middle', 'font-size': S.fontSmall * 0.9,
-        fill: '#cc0000', 'font-family': 'Meiryo, sans-serif'
+        fill: Utils.COLORS.evRed, 'font-family': 'Meiryo, sans-serif'
       });
       labelEl.textContent = label;
       group.appendChild(labelEl);
@@ -412,13 +412,13 @@ class SVGEngine {
 
     group.appendChild(Utils.createSVGElement('rect', {
       x: x - size / 2, y: y - size / 2, width: size, height: size,
-      fill: 'rgba(0,153,51,0.08)', stroke: '#009933', 'stroke-width': S.strokeMedium
+      fill: 'rgba(0,153,51,0.08)', stroke: Utils.COLORS.green, 'stroke-width': S.strokeMedium
     }));
 
     // EV icon
     const evText = Utils.createSVGElement('text', {
       x, y: y + 0.08, 'text-anchor': 'middle',
-      'font-size': 0.3, fill: '#009933', 'font-weight': 'bold'
+      'font-size': 0.3, fill: Utils.COLORS.green, 'font-weight': 'bold'
     });
     evText.textContent = 'EV';
     group.appendChild(evText);
@@ -427,7 +427,7 @@ class SVGEngine {
     const lbl = Utils.createSVGElement('text', {
       x, y: y + size / 2 + S.fontSmall * 1.5,
       'text-anchor': 'middle', 'font-size': S.fontSmall * 0.85,
-      fill: '#009933', 'font-family': 'Meiryo, sans-serif',
+      fill: Utils.COLORS.green, 'font-family': 'Meiryo, sans-serif',
       class: 'detail-label'
     });
     lbl.textContent = '路面表示 新設 900×900';
@@ -436,7 +436,7 @@ class SVGEngine {
     const surfLbl = Utils.createSVGElement('text', {
       x, y: y + size / 2 + S.fontSmall * 3,
       'text-anchor': 'middle', 'font-size': S.fontSmall * 0.75,
-      fill: '#009933', 'font-family': 'Meiryo, sans-serif',
+      fill: Utils.COLORS.green, 'font-family': 'Meiryo, sans-serif',
       class: 'detail-label'
     });
     surfLbl.textContent = `（路面状況：${surfaceType}）`;
@@ -455,7 +455,7 @@ class SVGEngine {
     });
     group.appendChild(Utils.createSVGElement('rect', {
       x: -0.3, y: -0.05, width: 0.6, height: 0.1,
-      fill: '#555', stroke: '#333', 'stroke-width': S.strokeThin, rx: 0.02
+      fill: '#555', stroke: Utils.COLORS.ink, 'stroke-width': S.strokeThin, rx: 0.02
     }));
     return this.addToGroup('wheel-stops-group', group);
   }
@@ -484,16 +484,16 @@ class SVGEngine {
     });
     group.appendChild(Utils.createSVGElement('circle', {
       cx: x, cy: y, r,
-      fill: 'rgba(255,200,0,0.15)', stroke: '#cc6600', 'stroke-width': S.strokeMedium
+      fill: 'rgba(255,200,0,0.15)', stroke: Utils.COLORS.orange, 'stroke-width': S.strokeMedium
     }));
     // Cross
     group.appendChild(Utils.createSVGElement('line', {
       x1: x, y1: y - r, x2: x, y2: y + r,
-      stroke: '#cc6600', 'stroke-width': S.strokeThin
+      stroke: Utils.COLORS.orange, 'stroke-width': S.strokeThin
     }));
     group.appendChild(Utils.createSVGElement('line', {
       x1: x - r, y1: y, x2: x + r, y2: y,
-      stroke: '#cc6600', 'stroke-width': S.strokeThin
+      stroke: Utils.COLORS.orange, 'stroke-width': S.strokeThin
     }));
     return this.addToGroup('lighting-group', group);
   }
@@ -509,7 +509,7 @@ class SVGEngine {
 
     group.appendChild(Utils.createSVGElement('rect', {
       x: x - width / 2, y: y - height / 2, width, height,
-      fill: 'rgba(200,200,200,0.2)', stroke: '#333', 'stroke-width': S.strokeMedium
+      fill: 'rgba(200,200,200,0.2)', stroke: Utils.COLORS.ink, 'stroke-width': S.strokeMedium
     }));
     // Diagonal hatching
     group.appendChild(Utils.createSVGElement('line', {
@@ -530,7 +530,7 @@ class SVGEngine {
     const lbl = Utils.createSVGElement('text', {
       x, y: y + height / 2 + S.fontSmall * 1.5,
       'text-anchor': 'middle', 'font-size': S.fontSmall * 0.85,
-      fill: '#333', 'font-family': 'Meiryo, sans-serif',
+      fill: Utils.COLORS.ink, 'font-family': 'Meiryo, sans-serif',
       class: 'detail-label'
     });
     lbl.textContent = `充電設備基礎 ${material} ${wMm}×${hMm}×${dMm}`;
@@ -540,7 +540,7 @@ class SVGEngine {
   }
 
   // ===== Leader Line Annotation (text with pointing line) =====
-  createLeaderAnnotation(id, targetX, targetY, textX, textY, lines, color = '#009933') {
+  createLeaderAnnotation(id, targetX, targetY, textX, textY, lines, color = Utils.COLORS.green) {
     const S = this.S;
     const lineArrayForData = Array.isArray(lines) ? lines : [lines];
     const group = Utils.createSVGElement('g', {
@@ -620,7 +620,7 @@ class SVGEngine {
   }
 
   // ===== Dimension Line =====
-  createDimension(id, x1, y1, x2, y2, labelOverride, dimColor = '#0066cc') {
+  createDimension(id, x1, y1, x2, y2, labelOverride, dimColor = Utils.COLORS.blue) {
     const S = this.S;
     const sw = S.strokeThin;
     const fs = S.fontSmall;
@@ -735,7 +735,7 @@ class SVGEngine {
   }
 
   // ===== Boundary Rectangle (充電エリア囲み線) =====
-  createBoundaryRect(id, x, y, width, height, color = '#0066cc') {
+  createBoundaryRect(id, x, y, width, height, color = Utils.COLORS.blue) {
     const S = this.S;
     const sw = S.strokeThin * 1.2;
     const fs = S.fontSmall;
@@ -779,7 +779,7 @@ class SVGEngine {
   }
 
   // ===== Text Annotation =====
-  createTextAnnotation(id, x, y, text, fontSize, color = '#333') {
+  createTextAnnotation(id, x, y, text, fontSize, color = Utils.COLORS.ink) {
     const S = this.S;
     const actualSize = fontSize ? fontSize * 0.1 : S.fontMedium; // Convert if legacy size passed
     const group = Utils.createSVGElement('g', {
