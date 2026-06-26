@@ -247,6 +247,7 @@ class App {
     this.history = new History(50);
     this.history.reset(StateSerializer.snapshot(this.svgEngine));
     this._bindHistoryControls();
+    this._offerRestore();
 
     console.log('EV充電設備 平面図作成ツール initialized');
   }
@@ -470,6 +471,7 @@ class App {
         this._updateHistoryButtons();
       }
     }
+    this._scheduleAutosave();
   }
 
   _hasAnnotationType(type) {
@@ -582,6 +584,42 @@ class App {
     } catch (err) {
       console.error('プロジェクト読込エラー:', err);
       alert('プロジェクトファイルの読み込みに失敗しました: ' + err.message);
+    }
+  }
+
+  // ===== 自動保存（localStorage） =====
+  _scheduleAutosave() {
+    clearTimeout(this._autosaveTimer);
+    this._autosaveTimer = setTimeout(() => this._autosave(), 1000);
+  }
+
+  _autosave() {
+    try {
+      const tbData = (this.titleBlock && this.titleBlock.data) ? this.titleBlock.data : {};
+      const viewBox = this.svgElement.getAttribute('viewBox');
+      const state = StateSerializer.serializeProject(this.svgEngine, tbData, viewBox, this._currentDxfName());
+      localStorage.setItem('ev-floorplan-autosave', JSON.stringify(state));
+    } catch (err) {
+      console.warn('自動保存に失敗（容量超過の可能性）:', err.message);
+    }
+  }
+
+  _offerRestore() {
+    let raw;
+    try { raw = localStorage.getItem('ev-floorplan-autosave'); } catch (e) { return; }
+    if (!raw) return;
+    let state;
+    try { state = JSON.parse(raw); } catch (e) { return; }
+    const count = (state.annotations || []).length;
+    if (count === 0) return;
+    const when = state.savedAt ? new Date(state.savedAt).toLocaleString('ja-JP') : '不明';
+    if (confirm(`前回の作業（注釈${count}件 / ${when}）を復元しますか？`)) {
+      const { titleBlock, viewBox } = StateSerializer.deserializeProject(this.svgEngine, state);
+      if (this.titleBlock && titleBlock) { Object.assign(this.titleBlock.data, titleBlock); this.titleBlock.render(); }
+      if (viewBox) this.svgElement.setAttribute('viewBox', viewBox);
+      this.updateChecklist();
+      this.history.reset(StateSerializer.snapshot(this.svgEngine));
+      this._updateHistoryButtons();
     }
   }
 }
