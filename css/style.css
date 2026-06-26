@@ -4,14 +4,14 @@ html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', 'Meiryo', 
 
 /* ===== Layout ===== */
 body { display: flex; flex-direction: column; }
-#header { display: flex; align-items: center; gap: 16px; padding: 6px 12px; background: #1a1a2e; color: #fff; min-height: 50px; z-index: 100; }
+#header { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; padding: 6px 12px; background: #1a1a2e; color: #fff; min-height: 50px; z-index: 100; }
 #main { display: flex; flex: 1; overflow: hidden; }
 #statusbar { display: flex; align-items: center; gap: 24px; padding: 4px 12px; background: #2a2a3e; color: #aab; font-size: 12px; min-height: 26px; }
 
 /* ===== Header ===== */
 .header-left h1 { font-size: 14px; font-weight: 600; white-space: nowrap; }
 .header-center { display: flex; gap: 12px; flex: 1; justify-content: center; }
-.header-right { display: flex; gap: 8px; }
+.header-right { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 
 .import-group { display: flex; gap: 12px; }
 .import-slot { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.08); border-radius: 6px; padding: 4px 10px; }
