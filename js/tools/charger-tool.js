@@ -26,9 +26,14 @@ class ChargerTool {
     const startNum = (pairNum - 1) * 2 + 1;
     const label = `EV充電設備${startNum},${startNum + 1}`;
 
-    this.svgEngine.createCharger(id, point.x, point.y, 0, label);
+    const el = this.svgEngine.createCharger(id, point.x, point.y, 0, label);
 
-    if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+    // 配置後は選択ツールへ戻り、置いた要素を自動選択（全配置ツールで統一）
+    if (typeof app !== 'undefined') {
+      app.toolManager.setActiveTool('select');
+      app.toolManager.tools.select.selectElement(el);
+      if (app.updateChecklist) app.updateChecklist();
+    }
   }
 
   _createPreview() {
