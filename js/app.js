@@ -430,38 +430,29 @@ class App {
 
   // Update subsidy requirements checklist
   updateChecklist() {
-    const checks = {
-      // 平面図チェック
-      'basic-info': this.titleBlock.isComplete(),
-      'space-dim': this._hasAnnotationType('charging-space'),
-      'equip-pos': this._hasAnnotationType('charger'),
-      'foundation': this._hasAnnotationType('foundation'),
-      'line-marking': this._hasAnnotationType('charging-space'),
-      'road-marking': this._hasAnnotationType('road-marking'),
-      'bollard': this._hasAnnotationType('bollard'),
-      'wheel-stop': this._hasAnnotationType('wheel-stop'),
-      'lighting': this._hasAnnotationType('lighting'),
-      // 配線ルート図チェック
-      'route-basic-info': this.titleBlock.isComplete(),
-      'route-wiring': this._hasAnnotationType('wiring-route'),
-      'route-equipment': this._hasAnnotationType('cubicle') || this._hasAnnotationType('charger'),
-      'route-pole': this._hasAnnotationType('pole'),
-      'route-handhole': this._hasAnnotationType('handhole'),
-      'route-existing': this._hasAnnotationType('existing-charger'),
-      'route-summary': this._hasAnnotationType('wiring-summary'),
-    };
+    const records = StateSerializer.serializeAnnotations(this.svgEngine);
+    const results = RequirementValidator.validate(records, { titleBlockComplete: this.titleBlock.isComplete() });
 
-    for (const [req, satisfied] of Object.entries(checks)) {
+    const ICONS = { ok: '✔', warn: '⚠', missing: '○', na: '–' };
+    for (const [req, res] of Object.entries(results)) {
       const li = document.querySelector(`[data-req="${req}"]`);
-      if (li) {
-        const icon = li.querySelector('.check-icon');
-        if (satisfied) {
-          li.classList.add('satisfied');
-          icon.textContent = '\u2714';
-        } else {
-          li.classList.remove('satisfied');
-          icon.textContent = '\u25CB';
+      if (!li) continue;
+      const icon = li.querySelector('.check-icon');
+      if (icon) icon.textContent = ICONS[res.status] || '○';
+      li.classList.toggle('satisfied', res.status === 'ok');
+      li.classList.toggle('req-warn', res.status === 'warn');
+      // メッセージ（warn/missing のみ）
+      li.title = res.message || '';
+      let msgEl = li.querySelector('.req-msg');
+      if (res.status === 'warn' && res.message) {
+        if (!msgEl) {
+          msgEl = document.createElement('span');
+          msgEl.className = 'req-msg';
+          li.appendChild(msgEl);
         }
+        msgEl.textContent = res.message;
+      } else if (msgEl) {
+        msgEl.remove();
       }
     }
 
