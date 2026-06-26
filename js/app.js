@@ -38,15 +38,13 @@ class App {
       svgEngine: this.svgEngine,
       onMouseDown(point, e) {
         if (e.button !== 0) return;
-        const wStr = prompt('幅 (mm)', '10800');
-        if (wStr === null) return;
-        const hStr = prompt('高さ (mm)', '5200');
-        if (hStr === null) return;
-        const w = parseFloat(wStr) / 1000;
-        const h = parseFloat(hStr) / 1000;
-        if (isNaN(w) || isNaN(h) || w <= 0 || h <= 0) return;
         const id = Utils.generateId();
-        this.svgEngine.createBoundaryRect(id, point.x, point.y, w, h, '#0066cc');
+        const el = this.svgEngine.createBoundaryRect(id, point.x, point.y, 10.8, 5.2, '#0066cc');
+        if (typeof app !== 'undefined') {
+          app.toolManager.setActiveTool('select');
+          app.toolManager.tools.select.selectElement(el);
+          if (app.updateChecklist) app.updateChecklist();
+        }
       }
     });
 
@@ -61,23 +59,26 @@ class App {
       svgEngine: this.svgEngine,
       onMouseDown(point, e) {
         if (e.button !== 0) return;
-        const label = prompt('名称を入力 (例: 分電盤, キュービクル)', '分電盤');
-        if (label === null) return;
         const id = Utils.generateId();
-        this.svgEngine.createCubicle(id, point.x, point.y, 1.0, 0.6, label);
-        if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+        const el = this.svgEngine.createCubicle(id, point.x, point.y, 1.0, 0.6, '分電盤');
+        if (typeof app !== 'undefined') {
+          app.toolManager.setActiveTool('select');
+          app.toolManager.tools.select.selectElement(el);
+          if (app.updateChecklist) app.updateChecklist();
+        }
       }
     });
     this.toolManager.registerTool('pole', {
       svgEngine: this.svgEngine,
       onMouseDown(point, e) {
         if (e.button !== 0) return;
-        const material = prompt('材質を入力 (例: コンクリート, 鋼管)', 'コンクリート');
-        if (material === null) return;
-        const height = prompt('高さを入力 (例: 8m)', '8m');
         const id = Utils.generateId();
-        this.svgEngine.createPole(id, point.x, point.y, material, height || '8m');
-        if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+        const el = this.svgEngine.createPole(id, point.x, point.y, 'コンクリート', '8m');
+        if (typeof app !== 'undefined') {
+          app.toolManager.setActiveTool('select');
+          app.toolManager.tools.select.selectElement(el);
+          if (app.updateChecklist) app.updateChecklist();
+        }
       }
     });
     this.toolManager.registerTool('handhole', {
@@ -93,22 +94,26 @@ class App {
       svgEngine: this.svgEngine,
       onMouseDown(point, e) {
         if (e.button !== 0) return;
-        const size = prompt('サイズを入力 (例: 200, 300, 400)', '200');
-        if (size === null) return;
-        const material = prompt('材質を入力 (例: SUS, 鉄)', 'SUS');
         const id = Utils.generateId();
-        this.svgEngine.createPullBox(id, point.x, point.y, size || '200', material || 'SUS');
-        if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+        const el = this.svgEngine.createPullBox(id, point.x, point.y, '200', 'SUS');
+        if (typeof app !== 'undefined') {
+          app.toolManager.setActiveTool('select');
+          app.toolManager.tools.select.selectElement(el);
+          if (app.updateChecklist) app.updateChecklist();
+        }
       }
     });
     this.toolManager.registerTool('existing-charger', {
       svgEngine: this.svgEngine,
       onMouseDown(point, e) {
         if (e.button !== 0) return;
-        const label = prompt('既設充電設備ラベル (例: 充電器①)', '');
         const id = Utils.generateId();
-        this.svgEngine.createExistingCharger(id, point.x, point.y, 0, label || '');
-        if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+        const el = this.svgEngine.createExistingCharger(id, point.x, point.y, 0, '');
+        if (typeof app !== 'undefined') {
+          app.toolManager.setActiveTool('select');
+          app.toolManager.tools.select.selectElement(el);
+          if (app.updateChecklist) app.updateChecklist();
+        }
       }
     });
 
