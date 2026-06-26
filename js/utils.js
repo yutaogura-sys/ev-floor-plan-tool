@@ -20,6 +20,15 @@ const Utils = {
     return Math.min(Math.max(val, min), max);
   },
 
+  // 用紙サイズ（横置き mm）。出力範囲プレビューとPDF出力の単一の真実の源。
+  PAPER: {
+    A3: { w: 420, h: 297, format: 'a3' },
+    A4: { w: 297, h: 210, format: 'a4' }
+  },
+  paperDims(name) {
+    return this.PAPER[name] || this.PAPER.A3;
+  },
+
   // Create SVG element with attributes
   createSVGElement(tag, attrs = {}) {
     const el = document.createElementNS('http://www.w3.org/2000/svg', tag);

@@ -256,9 +256,13 @@
             <input type="text" id="tb-author" placeholder="例：ENECHANGE EVラボ株式会社">
           </div>
           <div class="form-group">
-            <label>縮尺 <small style="color:#888">(PDF出力範囲に反映)</small></label>
+            <label>用紙・縮尺 <small style="color:#888">(PDF出力範囲に反映)</small></label>
             <div style="display:flex;gap:4px;align-items:center">
-              <input type="text" id="tb-scale" value="A3:1/100" placeholder="例: 1/100, 1:200" style="flex:1">
+              <select id="tb-paper" title="用紙サイズ" style="width:60px">
+                <option value="A3">A3</option>
+                <option value="A4">A4</option>
+              </select>
+              <input type="text" id="tb-scale" value="1/100" placeholder="例: 1/100, 1:200" style="flex:1">
               <button id="btn-show-boundary" title="出力範囲をキャンバスに表示" style="padding:4px 8px;font-size:11px;border:1px solid #4a9eff;border-radius:3px;background:#eef5ff;color:#2a6ed8;cursor:pointer;white-space:nowrap">範囲表示</button>
             </div>
           </div>

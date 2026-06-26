@@ -679,6 +679,7 @@ class App {
       // タイトルブロック復元
       if (this.titleBlock && titleBlock) {
         Object.assign(this.titleBlock.data, titleBlock);
+        if (this.titleBlock.syncInputs) this.titleBlock.syncInputs(); // フォーム入力欄を実データへ同期
         this.titleBlock.render();
       }
       // viewBox復元
