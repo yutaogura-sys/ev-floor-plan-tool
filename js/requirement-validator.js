@@ -59,6 +59,24 @@ const RequirementValidator = {
       'route-existing': has('existing-charger') ? ok() : na(),
       'route-summary': has('wiring-summary') ? ok() : missing('配線集計表が未生成です')
     };
+  },
+
+  // 出力前チェック用。validate() の結果から、対象グループ(plan|route)の
+  // missing / warn の reqId を集約する純関数。route-* を route グループ、
+  // それ以外を plan グループとして扱う。ok / na は除外。
+  summarizeForExport(results, group) {
+    results = results || {};
+    const isRoute = (id) => id.indexOf('route-') === 0;
+    const inGroup = (id) => (group === 'route' ? isRoute(id) : !isRoute(id));
+    const missing = [];
+    const warn = [];
+    for (const id of Object.keys(results)) {
+      if (!inGroup(id)) continue;
+      const st = results[id] && results[id].status;
+      if (st === 'missing') missing.push(id);
+      else if (st === 'warn') warn.push(id);
+    }
+    return { missing, warn };
   }
 };
 

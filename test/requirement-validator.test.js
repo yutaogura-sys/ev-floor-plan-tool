@@ -55,3 +55,44 @@ test('dimNear: 端点・中点で近接判定', () => {
   assert.strictEqual(RV.dimNear(d, 2, 0.2, 3), true);   // near midpoint
   assert.strictEqual(RV.dimNear(d, 20, 20, 3), false);  // far
 });
+
+test('summarizeForExport(plan): plan グループの missing/warn のみ集約・route-*除外', () => {
+  // 何も無し＝plan必須が多数 missing、route-* は plan では拾わない
+  const results = RV.validate([], {});
+  const s = RV.summarizeForExport(results, 'plan');
+  assert.ok(s.missing.includes('basic-info'));
+  assert.ok(s.missing.includes('foundation'));
+  assert.ok(!s.missing.some((id) => id.indexOf('route-') === 0));
+  assert.ok(!s.warn.some((id) => id.indexOf('route-') === 0));
+});
+
+test('summarizeForExport(route): route-* のみ集約', () => {
+  const results = RV.validate([], {});
+  const s = RV.summarizeForExport(results, 'route');
+  assert.ok(s.missing.includes('route-basic-info'));
+  assert.ok(s.missing.includes('route-summary'));
+  assert.ok(s.missing.every((id) => id.indexOf('route-') === 0));
+});
+
+test('summarizeForExport: warn は warn に、ok/na は除外', () => {
+  // 充電スペース有り・寸法無し → space-dim は warn。基礎等は missing。
+  const results = RV.validate([space(0, 0)], {});
+  const s = RV.summarizeForExport(results, 'plan');
+  assert.ok(s.warn.includes('space-dim'));
+  assert.ok(!s.missing.includes('space-dim'));
+  // bollard は na → どちらにも入らない
+  assert.ok(!s.missing.includes('bollard') && !s.warn.includes('bollard'));
+});
+
+test('summarizeForExport: 全ok相当（必須充足）なら missing 空', () => {
+  const recs = [
+    space(0, 0), dim(0, 0, 2.5, 0),
+    charger(1, 1), dim(1, 1, 1, 3),
+    { type: 'foundation', x: 0, y: 0 },
+    { type: 'road-marking', x: 5, y: 5 }, dim(5, 5, 5.9, 5),
+    { type: 'wheel-stop', x: 2, y: 2 }, dim(2, 2, 2, 2.5),
+    { type: 'lighting', x: 9, y: 9 }
+  ];
+  const s = RV.summarizeForExport(RV.validate(recs, { titleBlockComplete: true }), 'plan');
+  assert.deepStrictEqual(s.missing, []);
+});
