@@ -260,6 +260,10 @@ class App {
     this.history.reset(StateSerializer.snapshot(this.svgEngine));
     this._bindHistoryControls();
 
+    // 違和感チェック（ラベル重なり・出力範囲外）
+    const qcBtn = document.getElementById('btn-quality-check');
+    if (qcBtn) qcBtn.addEventListener('click', () => this.runQualityCheck());
+
     // 詳細ラベル表示トグル（OFFで説明系ラベルを画面上のみ非表示）
     const detailToggle = document.getElementById('toggle-detail-labels');
     if (detailToggle) {
@@ -601,6 +605,87 @@ class App {
       box.querySelector('.ec-proceed').addEventListener('click', () => close(true));
       overlay.addEventListener('click', (e) => { if (e.target === overlay) close(false); });
     });
+  }
+
+  // ===== 違和感チェック（品質） =====
+  // 描画後の各要素の描画座標bboxを集め、ラベル重なり・出力範囲外を抽出して提示。
+  runQualityCheck() {
+    const se = this.svgEngine;
+    // 要素の bbox を「描画座標系」で得る（getBBox×CTM。非表示要素は getBBox 不可→nullで除外）
+    const wbox = (el) => {
+      let b;
+      try { b = el.getBBox(); } catch (e) { return null; }
+      const m = el.getCTM();
+      if (!m || !b || (b.width === 0 && b.height === 0)) return null;
+      const pts = [[b.x, b.y], [b.x + b.width, b.y], [b.x + b.width, b.y + b.height], [b.x, b.y + b.height]]
+        .map(([x, y]) => ({ x: m.a * x + m.c * y + m.e, y: m.b * x + m.d * y + m.f }));
+      const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+      return { minX: Math.min(...xs), minY: Math.min(...ys), maxX: Math.max(...xs), maxY: Math.max(...ys) };
+    };
+
+    const labels = [];
+    se.annotationLayer.querySelectorAll('text').forEach((t) => {
+      const box = wbox(t);
+      const text = (t.textContent || '').trim();
+      if (box && text) labels.push({ text: text.slice(0, 24), box });
+    });
+
+    const elements = [];
+    se.getAnnotations().forEach((g) => {
+      const box = wbox(g);
+      if (box) elements.push({ id: g.dataset.id, type: g.dataset.type, box });
+    });
+
+    // 出力枠：範囲表示(exportBoundary)が設定済みならそれ、無ければ平面図の計算枠
+    let frame = null;
+    const eb = this.exportBoundary && this.exportBoundary.bounds;
+    if (eb && eb.w > 0) {
+      frame = { minX: eb.x, minY: eb.y, maxX: eb.x + eb.w, maxY: eb.y + eb.h };
+    } else {
+      try {
+        const vb = this.pdfExporter._computeExportViewBox(['plan', 'shared']);
+        if (vb) frame = { minX: vb.x, minY: vb.y, maxX: vb.x + vb.w, maxY: vb.y + vb.h };
+      } catch (e) { /* 枠不明なら範囲外チェックはスキップ */ }
+    }
+
+    const res = QualityChecker.analyze(labels, elements, frame);
+    this._showQualityResult(res, !!frame);
+  }
+
+  _showQualityResult(res, hadFrame) {
+    const nOv = res.labelOverlaps.length;
+    const nOut = res.outOfRange.length;
+    const overlay = document.createElement('div');
+    overlay.className = 'quality-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10001;display:flex;align-items:center;justify-content:center;';
+    const boxEl = document.createElement('div');
+    boxEl.style.cssText = 'background:#fff;color:#222;max-width:460px;width:90%;max-height:80vh;overflow:auto;border-radius:8px;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,0.3);font-family:Meiryo,sans-serif;font-size:13px;';
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    let html = '<h3 style="margin:0 0 12px;font-size:16px;">違和感チェック結果</h3>';
+    if (nOv === 0 && nOut === 0) {
+      html += '<p style="color:#2e7d32;">問題は見つかりませんでした 🎉</p>';
+    } else {
+      if (nOv > 0) {
+        html += `<p style="color:#b07000;font-weight:bold;margin:8px 0 4px;">ラベルの重なり（${nOv}組） — 読みづらい可能性。詳細ラベル表示をOFFにするか、ラベルをドラッグして引き出し線で離せます。</p>`;
+        html += '<ul style="margin:0 0 8px;padding-left:20px;color:#555;">' +
+          res.labelOverlaps.slice(0, 10).map((o) => `<li>「${esc(o.a)}」×「${esc(o.b)}」</li>`).join('') +
+          (nOv > 10 ? `<li>…他 ${nOv - 10} 組</li>` : '') + '</ul>';
+      }
+      if (nOut > 0) {
+        html += `<p style="color:#c00;font-weight:bold;margin:8px 0 4px;">出力範囲外（${nOut}件） — PDF出力時に見切れます。</p>`;
+        html += '<ul style="margin:0 0 8px;padding-left:20px;color:#555;">' +
+          res.outOfRange.slice(0, 10).map((o) => `<li>${esc(o.type)} (${esc(o.id)}) — ${o.status === 'outside' ? '完全に範囲外' : '一部はみ出し'}</li>`).join('') +
+          (nOut > 10 ? `<li>…他 ${nOut - 10} 件</li>` : '') + '</ul>';
+      }
+    }
+    if (!hadFrame) html += '<p style="font-size:11px;color:#888;">※出力範囲が未設定のため範囲外チェックは概算です（「範囲表示」で精度向上）。</p>';
+    html += '<div style="display:flex;justify-content:flex-end;margin-top:12px;"><button class="qc-close" style="padding:7px 14px;border:none;border-radius:4px;background:#1a6ed8;color:#fff;cursor:pointer;">閉じる</button></div>';
+    boxEl.innerHTML = html;
+    overlay.appendChild(boxEl);
+    document.body.appendChild(overlay);
+    const close = () => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); };
+    boxEl.querySelector('.qc-close').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
   }
 
   // ===== 履歴（Undo/Redo） =====
