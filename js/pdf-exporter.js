@@ -65,7 +65,7 @@ class PDFExporter {
       loadingText.textContent = 'PDFを保存中...';
 
       // Generate filename based on figure type
-      const siteName = document.getElementById('tb-site-name').value || typeLabel;
+      const siteName = Utils.safeFilename(document.getElementById('tb-site-name').value || typeLabel);
       const date = new Date().toISOString().split('T')[0];
       const prefix = figureType === 'route' ? '【③配線ルート図】' : '【②平面図】';
       const filename = `${prefix}${siteName}_${date}.pdf`;
