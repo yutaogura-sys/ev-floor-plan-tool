@@ -209,6 +209,45 @@ const StateSerializer = {
       args.push(record[f.name]);
     }
     return { method: def.method, args };
+  },
+
+  serializeAnnotations(svgEngine) {
+    const out = [];
+    const nodes = svgEngine.getAnnotations();
+    nodes.forEach(node => {
+      const type = node.dataset.type;
+      if (!type || !this.SCHEMA[type]) return; // 未対応はスキップ
+      const rec = this.recordFromDataset(type, node.dataset);
+      if (rec) out.push(rec);
+    });
+    return out;
+  },
+
+  deserializeAnnotations(svgEngine, records) {
+    svgEngine.clearAnnotations();
+    let skipped = 0;
+    for (const rec of (records || [])) {
+      const call = this.createCallFromRecord(rec);
+      if (!call || typeof svgEngine[call.method] !== 'function') { skipped++; continue; }
+      try {
+        svgEngine[call.method].apply(svgEngine, call.args);
+      } catch (e) {
+        skipped++;
+        console.warn('注釈の復元に失敗:', rec.type, rec.id, e);
+      }
+    }
+    if (skipped > 0) console.warn(`${skipped}件の注釈を復元できませんでした`);
+    return { restored: (records || []).length - skipped, skipped };
+  },
+
+  snapshot(svgEngine) {
+    return JSON.stringify(this.serializeAnnotations(svgEngine));
+  },
+
+  restore(svgEngine, snapshotString) {
+    let records = [];
+    try { records = JSON.parse(snapshotString) || []; } catch (e) { records = []; }
+    return this.deserializeAnnotations(svgEngine, records);
   }
 };
 
