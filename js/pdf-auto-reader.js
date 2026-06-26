@@ -160,25 +160,33 @@ class PDFAutoReader {
     const rotated = rawItems.filter(i => i.isRotated);
     const grouped = [...this._groupTextItems(horizontal), ...rotated];
 
-    // Classify and create annotations
-    const results = [];
+    // Build candidates (classify only; do NOT create yet)
+    const candidates = [];
     for (const item of grouped) {
-      const annotation = this._classifyAndCreate(item);
-      if (annotation) {
-        results.push(annotation);
-      }
+      const cls = PDFAutoReader.classifyText(item.str);
+      if (!cls) continue;
+      candidates.push({ text: item.str, x: item.x, y: item.y, kind: cls.kind, label: cls.label });
     }
 
-    if (typeof app !== 'undefined' && app.updateChecklist) {
-      app.updateChecklist();
+    if (candidates.length === 0) {
+      this._showNotification('読取可能な候補が見つかりませんでした。');
+      return { count: 0, items: [] };
     }
 
-    const msg = `${results.length}件の注釈を自動作成しました。`;
-    console.log(msg, results.map(r => `${r.type}: ${r.text}`));
-    // Use non-blocking notification
-    this._showNotification(msg);
-
-    return { count: results.length, items: results };
+    // Review before creating
+    const panel = (typeof app !== 'undefined' && app.reviewPanel) ? app.reviewPanel : new ReviewPanel();
+    return new Promise((resolve) => {
+      panel.show(candidates, (adopted) => {
+        const results = [];
+        for (const cand of adopted) {
+          const r = this._createFromCandidate(cand);
+          if (r) results.push(r);
+        }
+        if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+        this._showNotification(`${results.length}件の注釈を配置しました。`);
+        resolve({ count: results.length, items: results });
+      });
+    });
   }
 
   /**
@@ -232,78 +240,38 @@ class PDFAutoReader {
     return groups;
   }
 
-  /**
-   * Classify text and create the appropriate annotation
-   */
-  _classifyAndCreate(item) {
-    const text = item.str;
-    const x = item.x;
-    const y = item.y;
-
-    // ---- Charging Space ----
-    if (/充電スペース/.test(text)) {
-      const id = Utils.generateId();
-      this.svgEngine.createChargingSpace(id, x, y, 2.5, 5, '');
-      return { type: '充電スペース', text, id };
+  // 採用された候補から実際の注釈を生成する（kind はレビューでユーザーが変更済みの可能性あり）
+  _createFromCandidate(cand) {
+    const { text, x, y, kind, label } = cand;
+    const id = Utils.generateId();
+    switch (kind) {
+      case 'charging-space':
+        this.svgEngine.createChargingSpace(id, x, y, 2.5, 5, '');
+        return { type: '充電スペース', text, id };
+      case 'charger':
+        this.svgEngine.createCharger(id, x, y, 0, label || '');
+        return { type: '充電器', text, id };
+      case 'wire':
+        this.svgEngine.createLeaderAnnotation(id, x, y, x + 2, y - 1, [text], '#cc6600');
+        return { type: '配線', text, id };
+      case 'equipment':
+        this.svgEngine.createLeaderAnnotation(id, x, y, x + 2, y - 1, [text], '#009933');
+        return { type: '機器', text, id };
+      case 'conduit':
+        this.svgEngine.createLeaderAnnotation(id, x, y, x + 2, y - 1, [text], '#0066cc');
+        return { type: '配管', text, id };
+      case 'dimension':
+        this.svgEngine.createTextAnnotation(id, x, y, text, 0.25, '#0066cc');
+        return { type: '寸法', text: `${text}mm`, id };
+      case 'building-text':
+        this.svgEngine.createTextAnnotation(id, x, y, text, 0.5, '#333');
+        return { type: 'テキスト', text, id };
+      case 'text':
+        this.svgEngine.createTextAnnotation(id, x, y, text, 0.25, '#333');
+        return { type: 'テキスト', text, id };
+      default:
+        return null;
     }
-
-    // ---- Charger ----
-    if (/充電器[①-⑳\d]/.test(text) || /EV充電/.test(text)) {
-      const id = Utils.generateId();
-      const label = text.replace(/充電器/, '').trim() || '';
-      this.svgEngine.createCharger(id, x, y, 0, label);
-      return { type: '充電器', text, id };
-    }
-
-    // ---- Wire notation ----
-    if (/WL\d/i.test(text) || /CV\d*sq/i.test(text) || /\d+sq/i.test(text) || /HIVE/i.test(text)) {
-      const id = Utils.generateId();
-      const textX = x + 2;
-      const textY = y - 1;
-      this.svgEngine.createLeaderAnnotation(id, x, y, textX, textY, [text], '#cc6600');
-      return { type: '配線', text, id };
-    }
-
-    // ---- Equipment notation ----
-    if (/P\.?BOX/i.test(text) || /分電盤/i.test(text) || /キュービクル/i.test(text)) {
-      const id = Utils.generateId();
-      const textX = x + 2;
-      const textY = y - 1;
-      this.svgEngine.createLeaderAnnotation(id, x, y, textX, textY, [text], '#009933');
-      return { type: '機器', text, id };
-    }
-
-    // ---- Conduit notation ----
-    if (/FEP/i.test(text) || /PFD/i.test(text) || /配管/i.test(text) || /PF管/i.test(text)) {
-      const id = Utils.generateId();
-      const textX = x + 2;
-      const textY = y - 1;
-      this.svgEngine.createLeaderAnnotation(id, x, y, textX, textY, [text], '#0066cc');
-      return { type: '配管', text, id };
-    }
-
-    // ---- Dimension values (pure numbers, likely in mm) ----
-    if (/^\d{2,5}$/.test(text)) {
-      const id = Utils.generateId();
-      this.svgEngine.createTextAnnotation(id, x, y, text, 0.25, '#0066cc');
-      return { type: '寸法', text: `${text}mm`, id };
-    }
-
-    // ---- Building label ----
-    if (/建物/.test(text) || /店舗/.test(text)) {
-      const id = Utils.generateId();
-      this.svgEngine.createTextAnnotation(id, x, y, text, 0.5, '#333');
-      return { type: 'テキスト', text, id };
-    }
-
-    // ---- General text (skip very short items) ----
-    if (text.length >= 2) {
-      const id = Utils.generateId();
-      this.svgEngine.createTextAnnotation(id, x, y, text, 0.25, '#333');
-      return { type: 'テキスト', text, id };
-    }
-
-    return null;
   }
 
   /**

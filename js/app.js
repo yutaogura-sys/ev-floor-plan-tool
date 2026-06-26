@@ -226,6 +226,8 @@ class App {
 
     // Initialize PDF auto-reader
     this.pdfAutoReader = new PDFAutoReader(this.svgEngine, this.pdfViewer);
+    // 候補レビュー用モーダル（自動読取/将来のAI結果で共用）
+    this.reviewPanel = new ReviewPanel();
 
     // Panel collapse toggling
     document.querySelectorAll('.panel-title').forEach(title => {
