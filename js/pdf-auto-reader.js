@@ -5,6 +5,28 @@ class PDFAutoReader {
     this.pdfViewer = pdfViewer;
   }
 
+  // 純分類関数（DOM非依存・Nodeテスト可能）。既存の _classifyAndCreate の分類ロジックを踏襲。
+  static classifyText(text) {
+    if (!text) return null;
+    if (/充電スペース/.test(text)) return { kind: 'charging-space' };
+    if (/充電器[①-⑳\d]/.test(text) || /EV充電/.test(text)) {
+      return { kind: 'charger', label: text.replace(/充電器/, '').trim() };
+    }
+    if (/WL\d/i.test(text) || /CV\d*sq/i.test(text) || /\d+sq/i.test(text) || /HIVE/i.test(text)) {
+      return { kind: 'wire' };
+    }
+    if (/P\.?BOX/i.test(text) || /分電盤/.test(text) || /キュービクル/.test(text)) {
+      return { kind: 'equipment' };
+    }
+    if (/FEP/i.test(text) || /PFD/i.test(text) || /配管/.test(text) || /PF管/.test(text)) {
+      return { kind: 'conduit' };
+    }
+    if (/^\d{2,5}$/.test(text)) return { kind: 'dimension' };
+    if (/建物/.test(text) || /店舗/.test(text)) return { kind: 'building-text' };
+    if (text.length >= 2) return { kind: 'text' };
+    return null;
+  }
+
   /**
    * Extract text from a PDF overlay and create annotations.
    * Uses overlay transform for coordinate mapping.
@@ -302,4 +324,8 @@ class PDFAutoReader {
       setTimeout(() => toast.remove(), 500);
     }, 4000);
   }
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = PDFAutoReader;
 }
