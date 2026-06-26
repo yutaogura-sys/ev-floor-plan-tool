@@ -242,6 +242,12 @@ class App {
     // Set default viewbox
     this.svgElement.setAttribute('viewBox', '-100 -100 200 200');
 
+    // 履歴（Undo/Redo）
+    this._restoring = false; // restore中はupdateChecklistでの履歴記録を抑制
+    this.history = new History(50);
+    this.history.reset(StateSerializer.snapshot(this.svgEngine));
+    this._bindHistoryControls();
+
     console.log('EV充電設備 平面図作成ツール initialized');
   }
 
@@ -455,6 +461,15 @@ class App {
     if (this.exportBoundary) {
       this.exportBoundary.update();
     }
+
+    // 注釈の変化を検知して履歴に記録（restore中とredo履歴の同一スナップショットは抑制）
+    if (this.history && !this._restoring) {
+      const snap = StateSerializer.snapshot(this.svgEngine);
+      if (snap !== this.history.stack[this.history.index]) {
+        this.history.record(snap);
+        this._updateHistoryButtons();
+      }
+    }
   }
 
   _hasAnnotationType(type) {
@@ -462,15 +477,53 @@ class App {
     return group.querySelector(`[data-type="${type}"]`) !== null;
   }
 
-  undo() {
-    // Simple undo: remove last added annotation
-    const annotations = this.svgEngine.getAnnotations();
-    if (annotations.length > 0) {
-      const last = annotations[annotations.length - 1];
-      this.state.undoStack.push(last.outerHTML);
-      last.remove();
-      this.updateChecklist();
-    }
+  // ===== 履歴（Undo/Redo） =====
+  _bindHistoryControls() {
+    const undoBtn = document.getElementById('btn-undo');
+    const redoBtn = document.getElementById('btn-redo');
+    if (undoBtn) undoBtn.addEventListener('click', () => this.doUndo());
+    if (redoBtn) redoBtn.addEventListener('click', () => this.doRedo());
+
+    document.addEventListener('keydown', (e) => {
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (!ctrl) return;
+      const key = e.key.toLowerCase();
+      if (key === 'z' && !e.shiftKey) { e.preventDefault(); this.doUndo(); }
+      else if (key === 'y' || (key === 'z' && e.shiftKey)) { e.preventDefault(); this.doRedo(); }
+    });
+    this._updateHistoryButtons();
+  }
+
+  pushHistory() {
+    this.history.record(StateSerializer.snapshot(this.svgEngine));
+    this._updateHistoryButtons();
+  }
+
+  doUndo() {
+    const snap = this.history.undo();
+    if (snap === null) return;
+    this._restoring = true;
+    StateSerializer.restore(this.svgEngine, snap);
+    this.updateChecklist();
+    this._restoring = false;
+    this._updateHistoryButtons();
+  }
+
+  doRedo() {
+    const snap = this.history.redo();
+    if (snap === null) return;
+    this._restoring = true;
+    StateSerializer.restore(this.svgEngine, snap);
+    this.updateChecklist();
+    this._restoring = false;
+    this._updateHistoryButtons();
+  }
+
+  _updateHistoryButtons() {
+    const undoBtn = document.getElementById('btn-undo');
+    const redoBtn = document.getElementById('btn-redo');
+    if (undoBtn) undoBtn.disabled = !this.history.canUndo();
+    if (redoBtn) redoBtn.disabled = !this.history.canRedo();
   }
 }
 
