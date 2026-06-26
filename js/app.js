@@ -234,6 +234,11 @@ class App {
     // 候補レビュー用モーダル（自動読取/将来のAI結果で共用）
     this.reviewPanel = new ReviewPanel();
 
+    // AI読取（ラフ図のClaude vision解析）
+    this.aiReader = new AIReader(this.svgEngine, this.pdfViewer, this.reviewPanel, this.pdfAutoReader);
+    const aiBtn = document.getElementById('btn-ai-read');
+    if (aiBtn) aiBtn.addEventListener('click', () => this.aiReader.run());
+
     // Panel collapse toggling
     document.querySelectorAll('.panel-title').forEach(title => {
       title.addEventListener('click', () => {

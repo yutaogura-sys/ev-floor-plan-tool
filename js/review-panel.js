@@ -8,6 +8,7 @@ class ReviewPanel {
     ['equipment', '機器'],
     ['conduit', '配管'],
     ['dimension', '寸法'],
+    ['road-marking', '路面表示'],
     ['building-text', '建物テキスト'],
     ['text', 'テキスト']
   ];

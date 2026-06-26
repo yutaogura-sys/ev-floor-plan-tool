@@ -253,6 +253,9 @@ class PDFAutoReader {
       case 'charger':
         this.svgEngine.createCharger(id, x, y, 0, label || '');
         return { type: '充電器', text, id };
+      case 'road-marking':
+        this.svgEngine.createRoadMarking(id, x, y, 'アスファルト');
+        return { type: '路面表示', text, id };
       case 'wire':
         this.svgEngine.createLeaderAnnotation(id, x, y, x + 2, y - 1, [text], '#cc6600');
         return { type: '配線', text, id };
