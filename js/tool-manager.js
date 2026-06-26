@@ -98,7 +98,7 @@ class ToolManager {
     if (layerEl) {
       if (figureLayer) {
         const labels = { plan: '平面図専用', route: '配線ルート図専用', shared: '共通' };
-        const colors = { plan: '#cc0000', route: '#ff6600', shared: '#0066cc' };
+        const colors = { plan: Utils.COLORS.evRed, route: '#ff6600', shared: Utils.COLORS.blue };
         layerEl.textContent = `レイヤー: ${labels[figureLayer]}`;
         layerEl.style.color = colors[figureLayer];
         layerEl.style.fontWeight = 'bold';

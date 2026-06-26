@@ -52,16 +52,16 @@ class DimensionTool {
       // Extension lines
       group.appendChild(Utils.createSVGElement('line', {
         x1: p1.x, y1: p1.y, x2: p1.x, y2: y - extGap,
-        stroke: '#0066cc', 'stroke-width': sw
+        stroke: Utils.COLORS.blue, 'stroke-width': sw
       }));
       group.appendChild(Utils.createSVGElement('line', {
         x1: p2.x, y1: p2.y, x2: p2.x, y2: y - extGap,
-        stroke: '#0066cc', 'stroke-width': sw
+        stroke: Utils.COLORS.blue, 'stroke-width': sw
       }));
       // Dimension line with arrows
       group.appendChild(Utils.createSVGElement('line', {
         x1: p1.x, y1: y, x2: p2.x, y2: y,
-        stroke: '#0066cc', 'stroke-width': sw,
+        stroke: Utils.COLORS.blue, 'stroke-width': sw,
         'marker-start': 'url(#dim-arrow-start)',
         'marker-end': 'url(#dim-arrow-end)'
       }));
@@ -69,7 +69,7 @@ class DimensionTool {
       const text = Utils.createSVGElement('text', {
         x: (p1.x + p2.x) / 2, y: y - extGap * 2,
         'text-anchor': 'middle', 'font-size': fs,
-        fill: '#0066cc', 'font-family': 'Meiryo, sans-serif'
+        fill: Utils.COLORS.blue, 'font-family': 'Meiryo, sans-serif'
       });
       text.textContent = Utils.formatDimension(distMm);
       group.appendChild(text);
@@ -77,22 +77,22 @@ class DimensionTool {
       const x = Math.max(p1.x, p2.x) + offset;
       group.appendChild(Utils.createSVGElement('line', {
         x1: p1.x, y1: p1.y, x2: x + extGap, y2: p1.y,
-        stroke: '#0066cc', 'stroke-width': sw
+        stroke: Utils.COLORS.blue, 'stroke-width': sw
       }));
       group.appendChild(Utils.createSVGElement('line', {
         x1: p2.x, y1: p2.y, x2: x + extGap, y2: p2.y,
-        stroke: '#0066cc', 'stroke-width': sw
+        stroke: Utils.COLORS.blue, 'stroke-width': sw
       }));
       group.appendChild(Utils.createSVGElement('line', {
         x1: x, y1: p1.y, x2: x, y2: p2.y,
-        stroke: '#0066cc', 'stroke-width': sw,
+        stroke: Utils.COLORS.blue, 'stroke-width': sw,
         'marker-start': 'url(#dim-arrow-start)',
         'marker-end': 'url(#dim-arrow-end)'
       }));
       const text = Utils.createSVGElement('text', {
         x: x + fs * 0.5, y: (p1.y + p2.y) / 2,
         'text-anchor': 'middle', 'font-size': fs,
-        fill: '#0066cc', 'font-family': 'Meiryo, sans-serif',
+        fill: Utils.COLORS.blue, 'font-family': 'Meiryo, sans-serif',
         transform: `rotate(-90, ${x + fs * 0.5}, ${(p1.y + p2.y) / 2})`
       });
       text.textContent = Utils.formatDimension(distMm);
@@ -107,11 +107,11 @@ class DimensionTool {
     this.preview = Utils.createSVGElement('g', { opacity: '0.5' });
     this.previewLine = Utils.createSVGElement('line', {
       x1: point.x, y1: point.y, x2: point.x, y2: point.y,
-      stroke: '#0066cc', 'stroke-width': sw, 'stroke-dasharray': `${sw*4} ${sw*3}`
+      stroke: Utils.COLORS.blue, 'stroke-width': sw, 'stroke-dasharray': `${sw*4} ${sw*3}`
     });
     this.previewText = Utils.createSVGElement('text', {
       x: point.x, y: point.y - 0.3,
-      'font-size': '0.25', fill: '#0066cc', 'text-anchor': 'middle'
+      'font-size': '0.25', fill: Utils.COLORS.blue, 'text-anchor': 'middle'
     });
     this.preview.appendChild(this.previewLine);
     this.preview.appendChild(this.previewText);

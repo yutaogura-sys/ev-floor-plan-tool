@@ -157,7 +157,7 @@ class WiringSummary {
           const t = Utils.createSVGElement('text', {
             x: annotX, y: annotY + li * lineH,
             'text-anchor': 'start', 'font-size': fs,
-            fill: '#009933', 'font-family': 'Meiryo, sans-serif',
+            fill: Utils.COLORS.green, 'font-family': 'Meiryo, sans-serif',
             'font-weight': line.bold ? 'bold' : 'normal'
           });
           t.textContent = line.text;

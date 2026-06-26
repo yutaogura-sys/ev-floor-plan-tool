@@ -39,7 +39,7 @@ class App {
       onMouseDown(point, e) {
         if (e.button !== 0) return;
         const id = Utils.generateId();
-        const el = this.svgEngine.createBoundaryRect(id, point.x, point.y, 10.8, 5.2, '#0066cc');
+        const el = this.svgEngine.createBoundaryRect(id, point.x, point.y, 10.8, 5.2, Utils.COLORS.blue);
         if (typeof app !== 'undefined') {
           app.toolManager.setActiveTool('select');
           app.toolManager.tools.select.selectElement(el);
@@ -49,9 +49,9 @@ class App {
     });
 
     // Leader annotation tools (wire/equipment/conduit)
-    this.toolManager.registerTool('wire', new LeaderTool(this.svgEngine, 'wire', '#cc6600', '配線仕様を入力 (例: WL1 8sq 5m×2)'));
-    this.toolManager.registerTool('equipment', new LeaderTool(this.svgEngine, 'equipment', '#009933', '機器名称を入力 (例: P.BOX 5個)'));
-    this.toolManager.registerTool('conduit', new LeaderTool(this.svgEngine, 'conduit', '#0066cc', '配管仕様を入力 (例: FEP 28)'));
+    this.toolManager.registerTool('wire', new LeaderTool(this.svgEngine, 'wire', Utils.COLORS.orange, '配線仕様を入力 (例: WL1 8sq 5m×2)'));
+    this.toolManager.registerTool('equipment', new LeaderTool(this.svgEngine, 'equipment', Utils.COLORS.green, '機器名称を入力 (例: P.BOX 5個)'));
+    this.toolManager.registerTool('conduit', new LeaderTool(this.svgEngine, 'conduit', Utils.COLORS.blue, '配管仕様を入力 (例: FEP 28)'));
 
     // Wiring route diagram tools
     this.toolManager.registerTool('wiring-route', new WiringRouteTool(this.svgEngine));

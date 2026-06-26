@@ -12,28 +12,28 @@ const Symbols = {
     // Body
     chargerSymbol.appendChild(Utils.createSVGElement('rect', {
       x: -4, y: -8, width: 8, height: 16, rx: 1,
-      fill: 'none', stroke: '#cc0000', 'stroke-width': 0.8
+      fill: 'none', stroke: Utils.COLORS.evRed, 'stroke-width': 0.8
     }));
     // Plug connectors
     chargerSymbol.appendChild(Utils.createSVGElement('circle', {
-      cx: -1.5, cy: -3, r: 1.2, fill: '#cc0000'
+      cx: -1.5, cy: -3, r: 1.2, fill: Utils.COLORS.evRed
     }));
     chargerSymbol.appendChild(Utils.createSVGElement('circle', {
-      cx: 1.5, cy: -3, r: 1.2, fill: '#0066cc'
+      cx: 1.5, cy: -3, r: 1.2, fill: Utils.COLORS.blue
     }));
     // Cable lines
     chargerSymbol.appendChild(Utils.createSVGElement('line', {
       x1: -1.5, y1: -1.8, x2: -3, y2: 3,
-      stroke: '#cc0000', 'stroke-width': 0.5
+      stroke: Utils.COLORS.evRed, 'stroke-width': 0.5
     }));
     chargerSymbol.appendChild(Utils.createSVGElement('line', {
       x1: 1.5, y1: -1.8, x2: 3, y2: 3,
-      stroke: '#0066cc', 'stroke-width': 0.5
+      stroke: Utils.COLORS.blue, 'stroke-width': 0.5
     }));
     // EV text
     const evText = Utils.createSVGElement('text', {
       x: 0, y: 7, 'text-anchor': 'middle',
-      'font-size': '4', fill: '#cc0000', 'font-weight': 'bold'
+      'font-size': '4', fill: Utils.COLORS.evRed, 'font-weight': 'bold'
     });
     evText.textContent = 'EV';
     chargerSymbol.appendChild(evText);
@@ -46,11 +46,11 @@ const Symbols = {
     });
     roadMarkingSymbol.appendChild(Utils.createSVGElement('rect', {
       x: 0.5, y: 0.5, width: 9, height: 9,
-      fill: 'rgba(0,153,51,0.1)', stroke: '#009933', 'stroke-width': 0.5
+      fill: 'rgba(0,153,51,0.1)', stroke: Utils.COLORS.green, 'stroke-width': 0.5
     }));
     const rmText = Utils.createSVGElement('text', {
       x: 5, y: 7, 'text-anchor': 'middle',
-      'font-size': '5', fill: '#009933', 'font-weight': 'bold'
+      'font-size': '5', fill: Utils.COLORS.green, 'font-weight': 'bold'
     });
     rmText.textContent = 'EV';
     roadMarkingSymbol.appendChild(rmText);
@@ -67,7 +67,7 @@ const Symbols = {
       orient: 'auto'
     });
     arrowEnd.appendChild(Utils.createSVGElement('path', {
-      d: 'M0,0 L10,5 L0,10 Z', fill: '#0066cc'
+      d: 'M0,0 L10,5 L0,10 Z', fill: Utils.COLORS.blue
     }));
     defs.appendChild(arrowEnd);
 
@@ -80,7 +80,7 @@ const Symbols = {
       orient: 'auto'
     });
     arrowStart.appendChild(Utils.createSVGElement('path', {
-      d: 'M10,0 L0,5 L10,10 Z', fill: '#0066cc'
+      d: 'M10,0 L0,5 L10,10 Z', fill: Utils.COLORS.blue
     }));
     defs.appendChild(arrowStart);
   }

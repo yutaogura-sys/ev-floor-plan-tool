@@ -214,14 +214,14 @@ class SelectTool {
         const allTexts = [...el.querySelectorAll('text')].map(t => t.textContent).join('\n');
         const textEl = el.querySelector('text');
         const fs = parseFloat(textEl?.getAttribute('font-size') || 0.3);
-        const color = el.dataset.color || textEl?.getAttribute('fill') || '#333';
+        const color = el.dataset.color || textEl?.getAttribute('fill') || Utils.COLORS.ink;
         newEl = this.svgEngine.createTextAnnotation(id, ox, oy, allTexts, fs * 10, color);
         break;
       }
       case 'dimension': {
         // Dimension: copy shape by getting endpoints offset
         const lines = el.querySelectorAll('line');
-        const dimColor = el.dataset.color || '#0066cc';
+        const dimColor = el.dataset.color || Utils.COLORS.blue;
         const dist = parseFloat(el.dataset.distance || 0) / 1000; // mm to m
         // Place horizontal or vertical based on original orientation
         if (lines.length >= 3) {
@@ -237,7 +237,7 @@ class SelectTool {
       }
       case 'leader': {
         const leaderTexts = [...el.querySelectorAll('text')].map(t => t.textContent);
-        const leaderColor = el.dataset.color || '#009933';
+        const leaderColor = el.dataset.color || Utils.COLORS.green;
         const line = el.querySelector('line');
         const dx = line ? parseFloat(line.getAttribute('x2')) - parseFloat(line.getAttribute('x1')) : 3;
         const dy = line ? parseFloat(line.getAttribute('y2')) - parseFloat(line.getAttribute('y1')) : -2;
@@ -280,7 +280,7 @@ class SelectTool {
       case 'boundary-rect': {
         const w = parseFloat(el.dataset.width);
         const h = parseFloat(el.dataset.height);
-        const color = el.dataset.color || '#0066cc';
+        const color = el.dataset.color || Utils.COLORS.blue;
         newEl = this.svgEngine.createBoundaryRect(id, ox, oy, w, h, color);
         break;
       }
@@ -497,7 +497,7 @@ class SelectTool {
       case 'text': {
         const textEl = element.querySelector('text');
         const textContent = [...element.querySelectorAll('text')].map(t => t.textContent).join('\n');
-        const textColor = element.dataset.color || '#333';
+        const textColor = element.dataset.color || Utils.COLORS.ink;
         const textFontSize = textEl ? parseFloat(textEl.getAttribute('font-size')) : 0.35;
         html += `
           <div class="form-group"><label>テキスト</label><textarea data-prop="textContent" class="prop-input" style="width:100%;min-height:60px;background:#2a2a2a;color:#ddd;border:1px solid #555;border-radius:3px;padding:4px;resize:vertical;">${textContent}</textarea></div>
@@ -510,14 +510,14 @@ class SelectTool {
         break;
       case 'dimension': {
         const dist = element.dataset.distance;
-        const dimColor = element.dataset.color || '#0066cc';
+        const dimColor = element.dataset.color || Utils.COLORS.blue;
         html += `<p>寸法: ${dist}mm</p>`;
         html += this._colorPickerHtml('color', dimColor);
         break;
       }
       case 'leader': {
         const leaderLines = [...element.querySelectorAll('text')].map(t => t.textContent).join('\n');
-        const leaderColor = element.dataset.color || '#009933';
+        const leaderColor = element.dataset.color || Utils.COLORS.green;
         html += `
           <div class="form-group"><label>テキスト</label><textarea data-prop="textContent" class="prop-input" style="width:100%;min-height:60px;background:#2a2a2a;color:#ddd;border:1px solid #555;border-radius:3px;padding:4px;resize:vertical;">${leaderLines}</textarea></div>
           ${this._colorPickerHtml('color', leaderColor)}`;
@@ -526,7 +526,7 @@ class SelectTool {
       case 'boundary-rect': {
         const brW = parseFloat(element.dataset.width) * 1000;
         const brH = parseFloat(element.dataset.height) * 1000;
-        const brColor = element.dataset.color || '#0066cc';
+        const brColor = element.dataset.color || Utils.COLORS.blue;
         html += `
           <div class="form-group"><label>幅 (mm)</label><input type="number" value="${Math.round(brW)}" data-prop="width" class="prop-input"></div>
           <div class="form-group"><label>高さ (mm)</label><input type="number" value="${Math.round(brH)}" data-prop="height" class="prop-input"></div>
@@ -976,10 +976,10 @@ class SelectTool {
   _colorPickerHtml(propName, currentColor) {
     const presets = [
       { color: '#333333', label: '黒' },
-      { color: '#009933', label: '緑' },
-      { color: '#0066cc', label: '青' },
-      { color: '#cc0000', label: '赤' },
-      { color: '#cc6600', label: '橙' }
+      { color: Utils.COLORS.green, label: '緑' },
+      { color: Utils.COLORS.blue, label: '青' },
+      { color: Utils.COLORS.evRed, label: '赤' },
+      { color: Utils.COLORS.orange, label: '橙' }
     ];
     let html = '<div class="form-group"><label>色</label><div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">';
     presets.forEach(p => {

@@ -174,7 +174,7 @@ class WiringRouteTool {
       const v2 = this.vertices[i + 1];
       this.previewGroup.appendChild(Utils.createSVGElement('line', {
         x1: v1.x, y1: v1.y, x2: v2.x, y2: v2.y,
-        stroke: '#cc0000', 'stroke-width': 0.08, opacity: 0.6
+        stroke: Utils.COLORS.evRed, 'stroke-width': 0.08, opacity: 0.6
       }));
     }
 
@@ -182,7 +182,7 @@ class WiringRouteTool {
     for (const v of this.vertices) {
       this.previewGroup.appendChild(Utils.createSVGElement('circle', {
         cx: v.x, cy: v.y, r: 0.08,
-        fill: '#cc0000', opacity: 0.8
+        fill: Utils.COLORS.evRed, opacity: 0.8
       }));
     }
 
@@ -196,7 +196,7 @@ class WiringRouteTool {
     const last = this.vertices[this.vertices.length - 1];
     this.previewLine = Utils.createSVGElement('line', {
       x1: last.x, y1: last.y, x2: point.x, y2: point.y,
-      stroke: '#cc0000', 'stroke-width': 0.06,
+      stroke: Utils.COLORS.evRed, 'stroke-width': 0.06,
       'stroke-dasharray': '0.2 0.1', opacity: 0.5
     });
 
