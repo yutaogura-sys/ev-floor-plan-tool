@@ -7,9 +7,37 @@ class ToolManager {
     this.tools = {};
     this.container = document.getElementById('canvas-container');
 
+    // グリッドスナップ（配置系ツールの座標を格子に丸める）
+    this.snapEnabled = true;
+    this.gridSize = 0.25; // m
+
     this._initToolButtons();
     this._initCanvasEvents();
     this._initKeyboardShortcuts();
+    this._initSnapToggle();
+  }
+
+  // 配置点をグリッドに丸める。select/pan は対象外（ヒットテスト・移動の誤動作回避）。
+  _snapPoint(p) {
+    if (!this.snapEnabled || this.activeTool === 'select' || this.activeTool === 'pan') return p;
+    return { x: Utils.snapToGrid(p.x, this.gridSize), y: Utils.snapToGrid(p.y, this.gridSize) };
+  }
+
+  _initSnapToggle() {
+    const el = document.getElementById('status-snap');
+    if (!el) return;
+    el.style.cursor = 'pointer';
+    el.title = 'クリックでグリッドスナップを切替';
+    el.addEventListener('click', () => {
+      this.snapEnabled = !this.snapEnabled;
+      this._updateSnapIndicator();
+    });
+    this._updateSnapIndicator();
+  }
+
+  _updateSnapIndicator() {
+    const el = document.getElementById('status-snap');
+    if (el) el.textContent = this.snapEnabled ? `スナップ: ON (${this.gridSize}m)` : 'スナップ: OFF';
   }
 
   registerTool(name, tool) {
@@ -108,7 +136,7 @@ class ToolManager {
       if (this.viewport.isPanning) return;
       const tool = this.tools[this.activeTool];
       if (tool && tool.onMouseDown) {
-        const svgPoint = this.viewport.screenToSVG(e.clientX, e.clientY);
+        const svgPoint = this._snapPoint(this.viewport.screenToSVG(e.clientX, e.clientY));
         tool.onMouseDown(svgPoint, e);
       }
     });
@@ -117,7 +145,7 @@ class ToolManager {
       if (this.viewport.isPanning) return;
       const tool = this.tools[this.activeTool];
       if (tool && tool.onMouseMove) {
-        const svgPoint = this.viewport.screenToSVG(e.clientX, e.clientY);
+        const svgPoint = this._snapPoint(this.viewport.screenToSVG(e.clientX, e.clientY));
         tool.onMouseMove(svgPoint, e);
       }
     });
@@ -126,7 +154,7 @@ class ToolManager {
       if (this.viewport.isPanning) return;
       const tool = this.tools[this.activeTool];
       if (tool && tool.onMouseUp) {
-        const svgPoint = this.viewport.screenToSVG(e.clientX, e.clientY);
+        const svgPoint = this._snapPoint(this.viewport.screenToSVG(e.clientX, e.clientY));
         tool.onMouseUp(svgPoint, e);
       }
     });
@@ -134,7 +162,7 @@ class ToolManager {
     svg.addEventListener('dblclick', (e) => {
       const tool = this.tools[this.activeTool];
       if (tool && tool.onDoubleClick) {
-        const svgPoint = this.viewport.screenToSVG(e.clientX, e.clientY);
+        const svgPoint = this._snapPoint(this.viewport.screenToSVG(e.clientX, e.clientY));
         tool.onDoubleClick(svgPoint, e);
       }
     });
