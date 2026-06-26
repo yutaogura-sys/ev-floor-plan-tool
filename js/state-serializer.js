@@ -180,17 +180,22 @@ const StateSerializer = {
     if (def.special === 'wiring-route') {
       let routeData = null;
       try { routeData = JSON.parse(dataset.routeData); } catch (e) { routeData = null; }
-      return { type, id, routeData };
+      const wr = { type, id, routeData };
+      if (dataset.figure !== undefined) wr.figure = dataset.figure;
+      return wr;
     }
     if (def.special === 'wiring-summary') {
       let summaryData = null;
       try { summaryData = JSON.parse(dataset.summaryData); } catch (e) { summaryData = null; }
-      return { type, id, x: parseFloat(dataset.x), y: parseFloat(dataset.y), summaryData };
+      const ws = { type, id, x: parseFloat(dataset.x), y: parseFloat(dataset.y), summaryData };
+      if (dataset.figure !== undefined) ws.figure = dataset.figure;
+      return ws;
     }
     const rec = { type, id };
     for (const f of def.fields) {
       rec[f.name] = this._coerce(f.kind, dataset[f.key]);
     }
+    if (dataset.figure !== undefined) rec.figure = dataset.figure;
     return rec;
   },
 
@@ -230,7 +235,8 @@ const StateSerializer = {
       const call = this.createCallFromRecord(rec);
       if (!call || typeof svgEngine[call.method] !== 'function') { skipped++; continue; }
       try {
-        svgEngine[call.method].apply(svgEngine, call.args);
+        const el = svgEngine[call.method].apply(svgEngine, call.args);
+        if (el && rec.figure) el.setAttribute('data-figure', rec.figure);
       } catch (e) {
         skipped++;
         console.warn('注釈の復元に失敗:', rec.type, rec.id, e);

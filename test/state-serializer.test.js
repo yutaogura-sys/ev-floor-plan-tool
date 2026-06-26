@@ -60,3 +60,15 @@ test('未知typeは null', () => {
   assert.strictEqual(StateSerializer.recordFromDataset('unknown', { id: 'x' }), null);
   assert.strictEqual(StateSerializer.createCallFromRecord({ type: 'unknown', id: 'x' }), null);
 });
+
+test('recordFromDataset: figure を捕捉する', () => {
+  const ds = { id: 'a1', type: 'charging-space', x: '0', y: '0', width: '2.5', height: '5', number: '', rotation: '0', figure: 'route' };
+  const rec = StateSerializer.recordFromDataset('charging-space', ds);
+  assert.strictEqual(rec.figure, 'route');
+});
+
+test('recordFromDataset: figure 無しのデータセットは figure キーを持たない', () => {
+  const ds = { id: 'a1', type: 'bollard', x: '0', y: '0' };
+  const rec = StateSerializer.recordFromDataset('bollard', ds);
+  assert.strictEqual('figure' in rec, false);
+});
