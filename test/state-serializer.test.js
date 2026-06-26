@@ -141,6 +141,26 @@ test('deserializeAnnotations: 未知タイプ/欠落メソッドは throw せず
   assert.strictEqual(res.skipped, 2);
 });
 
+test('createCallFromRecord: null/不正レコードでも throw せず null（破損読込の堅牢化）', () => {
+  assert.strictEqual(StateSerializer.createCallFromRecord(null), null);
+  assert.strictEqual(StateSerializer.createCallFromRecord(undefined), null);
+  assert.strictEqual(StateSerializer.createCallFromRecord('x'), null);
+  assert.strictEqual(StateSerializer.createCallFromRecord({ type: 'unknown' }), null);
+});
+
+test('deserializeAnnotations: 配列に null/未知/破損が混在しても throw せず良品のみ復元', () => {
+  const eng = makeFakeEngine();
+  const res = StateSerializer.deserializeAnnotations(eng, [
+    null,
+    {},
+    { type: 'unknown', id: 'u' },
+    { type: 'charging-space', id: 'good', x: 0, y: 0, width: 2.5, height: 5, number: '①', rotation: 0 }
+  ]);
+  assert.strictEqual(res.restored, 1);
+  assert.ok(res.skipped >= 3);
+  assert.ok(eng.calls.find((c) => c.args[0] === 'good'));
+});
+
 test('deserializeAnnotations: create が throw しても握って skipped、後続は継続', () => {
   const eng = makeFakeEngine({ throwOn: 'createFoundation' });
   const res = StateSerializer.deserializeAnnotations(eng, [

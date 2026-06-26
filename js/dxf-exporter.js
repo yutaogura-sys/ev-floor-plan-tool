@@ -812,7 +812,7 @@ class DXFExporter {
 
   // CSS色 → AutoCAD カラーインデックス(ACI)
   static colorToACI(cssColor) {
-    const c = (cssColor || '').toLowerCase();
+    const c = String(cssColor == null ? '' : cssColor).toLowerCase();
     const map = {
       '#cc0000': 1, '#ff0000': 1, 'red': 1,
       '#009933': 3, '#00cc00': 3, 'green': 3,

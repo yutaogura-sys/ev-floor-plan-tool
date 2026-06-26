@@ -203,6 +203,8 @@ const StateSerializer = {
   },
 
   createCallFromRecord(record) {
+    // 不正/欠損レコード（破損プロジェクト読込時の null 要素など）でも throw しない
+    if (!record || typeof record !== 'object') return null;
     const def = this.SCHEMA[record.type];
     if (!def) return null;
     if (def.special === 'wiring-route') {

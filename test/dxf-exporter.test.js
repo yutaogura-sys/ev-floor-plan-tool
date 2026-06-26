@@ -74,3 +74,10 @@ test('colorToACI: 代表色と未知色・大文字', () => {
   assert.strictEqual(DXFExporter.colorToACI('#abcdef'), 7); // 未知→既定7
   assert.strictEqual(DXFExporter.colorToACI(undefined), 7);
 });
+
+test('colorToACI: 非文字列でも throw せず既定7（堅牢化）', () => {
+  assert.strictEqual(DXFExporter.colorToACI(123), 7);
+  assert.strictEqual(DXFExporter.colorToACI(null), 7);
+  assert.strictEqual(DXFExporter.colorToACI({}), 7);
+  assert.strictEqual(DXFExporter.colorToACI(true), 7);
+});
