@@ -337,7 +337,8 @@ class SVGEngine {
     const dimLabel = Utils.createSVGElement('text', {
       x: width / 2, y: height / 2 + S.fontSmall * 1.2,
       'text-anchor': 'middle', 'font-size': S.fontSmall * 0.85,
-      fill: '#cc0000', 'font-family': 'Meiryo, sans-serif'
+      fill: '#cc0000', 'font-family': 'Meiryo, sans-serif',
+      class: 'detail-label'
     });
     dimLabel.textContent = `幅${width.toFixed(2)}m×奥行${height.toFixed(1)}m`;
     group.appendChild(dimLabel);
@@ -426,7 +427,8 @@ class SVGEngine {
     const lbl = Utils.createSVGElement('text', {
       x, y: y + size / 2 + S.fontSmall * 1.5,
       'text-anchor': 'middle', 'font-size': S.fontSmall * 0.85,
-      fill: '#009933', 'font-family': 'Meiryo, sans-serif'
+      fill: '#009933', 'font-family': 'Meiryo, sans-serif',
+      class: 'detail-label'
     });
     lbl.textContent = '路面表示 新設 900×900';
     group.appendChild(lbl);
@@ -434,7 +436,8 @@ class SVGEngine {
     const surfLbl = Utils.createSVGElement('text', {
       x, y: y + size / 2 + S.fontSmall * 3,
       'text-anchor': 'middle', 'font-size': S.fontSmall * 0.75,
-      fill: '#009933', 'font-family': 'Meiryo, sans-serif'
+      fill: '#009933', 'font-family': 'Meiryo, sans-serif',
+      class: 'detail-label'
     });
     surfLbl.textContent = `（路面状況：${surfaceType}）`;
     group.appendChild(surfLbl);
@@ -527,7 +530,8 @@ class SVGEngine {
     const lbl = Utils.createSVGElement('text', {
       x, y: y + height / 2 + S.fontSmall * 1.5,
       'text-anchor': 'middle', 'font-size': S.fontSmall * 0.85,
-      fill: '#333', 'font-family': 'Meiryo, sans-serif'
+      fill: '#333', 'font-family': 'Meiryo, sans-serif',
+      class: 'detail-label'
     });
     lbl.textContent = `充電設備基礎 ${material} ${wMm}×${hMm}×${dMm}`;
     group.appendChild(lbl);

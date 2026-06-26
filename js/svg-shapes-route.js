@@ -51,7 +51,8 @@ Object.assign(SVGEngine.prototype, {
     // Label below
     const lbl = Utils.createSVGElement('text', {
       x, y: y + r + S.fontSmall * 1.5, 'text-anchor': 'middle',
-      'font-size': S.fontSmall * 0.85, fill: '#663300', 'font-family': 'Meiryo, sans-serif'
+      'font-size': S.fontSmall * 0.85, fill: '#663300', 'font-family': 'Meiryo, sans-serif',
+      class: 'detail-label'
     });
     lbl.textContent = `建柱 ${material} H=${height}`;
     group.appendChild(lbl);
@@ -87,7 +88,8 @@ Object.assign(SVGEngine.prototype, {
     const wMm = Math.round(w * 1000), dMm = Math.round(d * 1000), hMm = Math.round(h * 1000);
     const lbl = Utils.createSVGElement('text', {
       x, y: y + sz / 2 + S.fontSmall * 1.5, 'text-anchor': 'middle',
-      'font-size': S.fontSmall * 0.75, fill: '#666', 'font-family': 'Meiryo, sans-serif'
+      'font-size': S.fontSmall * 0.75, fill: '#666', 'font-family': 'Meiryo, sans-serif',
+      class: 'detail-label'
     });
     lbl.textContent = `HH ${material} ${wMm}×${dMm}×${hMm}`;
     group.appendChild(lbl);
@@ -122,7 +124,8 @@ Object.assign(SVGEngine.prototype, {
     // Label below
     const lbl = Utils.createSVGElement('text', {
       x, y: y + sz / 2 + S.fontSmall * 1.3, 'text-anchor': 'middle',
-      'font-size': S.fontSmall * 0.75, fill: '#0066cc', 'font-family': 'Meiryo, sans-serif'
+      'font-size': S.fontSmall * 0.75, fill: '#0066cc', 'font-family': 'Meiryo, sans-serif',
+      class: 'detail-label'
     });
     lbl.textContent = `PB ${material} ${size}`;
     group.appendChild(lbl);

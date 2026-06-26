@@ -776,7 +776,8 @@ class SelectTool {
     const dimLabel = Utils.createSVGElement('text', {
       x: w / 2, y: h / 2 + S.fontSmall * 1.2,
       'text-anchor': 'middle', 'font-size': S.fontSmall * 0.85,
-      fill: '#cc0000', 'font-family': 'Meiryo, sans-serif'
+      fill: '#cc0000', 'font-family': 'Meiryo, sans-serif',
+      class: 'detail-label'
     });
     dimLabel.textContent = `幅${w.toFixed(2)}m×奥行${h.toFixed(1)}m`;
     el.appendChild(dimLabel);
@@ -808,7 +809,8 @@ class SelectTool {
     const lbl = Utils.createSVGElement('text', {
       x, y: y + height / 2 + S.fontSmall * 1.5,
       'text-anchor': 'middle', 'font-size': S.fontSmall * 0.85,
-      fill: '#333', 'font-family': 'Meiryo, sans-serif'
+      fill: '#333', 'font-family': 'Meiryo, sans-serif',
+      class: 'detail-label'
     });
     lbl.textContent = `充電設備基礎 ${material} ${wMm}×${hMm}×${dMm}`;
     el.appendChild(lbl);
@@ -924,7 +926,8 @@ class SelectTool {
     el.appendChild(pbText);
     const lbl = Utils.createSVGElement('text', {
       x, y: y + sz / 2 + S.fontSmall * 1.3, 'text-anchor': 'middle',
-      'font-size': S.fontSmall * 0.75, fill: '#0066cc', 'font-family': 'Meiryo, sans-serif'
+      'font-size': S.fontSmall * 0.75, fill: '#0066cc', 'font-family': 'Meiryo, sans-serif',
+      class: 'detail-label'
     });
     lbl.textContent = `PB ${material} ${size}`;
     el.appendChild(lbl);

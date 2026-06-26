@@ -187,3 +187,6 @@ body { display: flex; flex-direction: column; }
 /* 補助金要件チェック: 警告表示 */
 .checklist li.req-warn { color: #b8860b; }
 .checklist .req-msg { display: block; font-size: 10px; color: #b8860b; margin-left: 16px; line-height: 1.3; }
+
+/* 詳細ラベル表示トグル: OFF 時は説明系ラベルを画面上で非表示（PDF出力は別途常に表示） */
+#drawing-canvas.labels-hidden .detail-label { display: none; }
