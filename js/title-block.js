@@ -9,7 +9,8 @@ class TitleBlock {
       projectName: '充電設備設置工事',
       drawingName: '平面図',
       author: '',
-      scale: 'A3:1/100',
+      scale: '1/100',
+      paper: 'A3',
       date: '',
       northAngle: 0
     };
@@ -24,6 +25,7 @@ class TitleBlock {
       'tb-drawing-name': 'drawingName',
       'tb-author': 'author',
       'tb-scale': 'scale',
+      'tb-paper': 'paper',
       'tb-date': 'date',
       'tb-north-angle': 'northAngle'
     };
@@ -39,14 +41,18 @@ class TitleBlock {
           // Sync scale to status bar and export boundary when scale field changes
           if (dataKey === 'scale') {
             const statusScale = document.getElementById('status-scale');
+            const n = Utils.parseScale(this.data.scale);
             if (statusScale) {
-              const n = Utils.parseScale(this.data.scale);
               statusScale.textContent = n ? `縮尺: 1/${n}` : `縮尺: ${this.data.scale}`;
             }
-            // Update export boundary preview
-            if (typeof app !== 'undefined' && app.exportBoundary) {
-              app.exportBoundary.update();
+            // 縮尺が解釈できない入力は無言で範囲枠を消さず、理由を通知
+            if (!n && this.data.scale && input === document.activeElement && Utils.toast) {
+              Utils.toast('縮尺を解釈できません（例: 1/100, 1:200）。出力範囲は前回値のままです。', 'error');
             }
+          }
+          // 縮尺・用紙のどちらの変更でも出力範囲プレビューを更新
+          if ((dataKey === 'scale' || dataKey === 'paper') && typeof app !== 'undefined' && app.exportBoundary) {
+            app.exportBoundary.update();
           }
         };
         input.addEventListener('input', handler);
@@ -60,6 +66,26 @@ class TitleBlock {
       const today = new Date();
       dateInput.value = today.toISOString().split('T')[0];
       this.data.date = dateInput.value;
+    }
+  }
+
+  // data の値を各入力欄へ反映（プロジェクト読込後にフォームを実データへ同期）
+  syncInputs() {
+    const map = {
+      'tb-site-name': 'siteName', 'tb-project-name': 'projectName',
+      'tb-drawing-name': 'drawingName', 'tb-author': 'author',
+      'tb-scale': 'scale', 'tb-paper': 'paper', 'tb-date': 'date',
+      'tb-north-angle': 'northAngle'
+    };
+    for (const [id, key] of Object.entries(map)) {
+      const el = document.getElementById(id);
+      if (el && this.data[key] !== undefined && this.data[key] !== null) el.value = this.data[key];
+    }
+    // ステータスバーの縮尺表示も同期
+    const statusScale = document.getElementById('status-scale');
+    if (statusScale) {
+      const n = Utils.parseScale(this.data.scale);
+      statusScale.textContent = n ? `縮尺: 1/${n}` : `縮尺: ${this.data.scale}`;
     }
   }
 

@@ -35,10 +35,10 @@ class ExportBoundaryPreview {
     const scaleN = Utils.parseScale(scaleStr);
     if (!scaleN) return;
 
-    const A3_W_MM = 420;
-    const A3_H_MM = 297;
-    const vbW = A3_W_MM * scaleN / 1000; // meters
-    const vbH = A3_H_MM * scaleN / 1000;
+    const paperName = (typeof app !== 'undefined' && app.titleBlock?.data?.paper) || 'A3';
+    const paper = Utils.paperDims(paperName);
+    const vbW = paper.w * scaleN / 1000; // meters
+    const vbH = paper.h * scaleN / 1000;
 
     // Get current viewport center
     const svg = document.getElementById('drawing-canvas');
@@ -86,7 +86,7 @@ class ExportBoundaryPreview {
       'font-family': 'Meiryo, sans-serif', 'font-weight': 'bold',
       opacity: 0.85, 'pointer-events': 'none'
     });
-    label.textContent = `PDF出力範囲 (A3 1:${scaleN})  ${vbW.toFixed(1)}m × ${vbH.toFixed(1)}m`;
+    label.textContent = `PDF出力範囲 (${paperName} 1:${scaleN})  ${vbW.toFixed(1)}m × ${vbH.toFixed(1)}m`;
     this.layer.appendChild(label);
   }
 

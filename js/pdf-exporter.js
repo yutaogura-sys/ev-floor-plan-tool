@@ -26,13 +26,14 @@ class PDFExporter {
       : ['plan', 'shared'];
 
     try {
-      // A3 landscape: 420mm x 297mm
-      // Use 300 DPI for crisp output on A3
-      const DPI = 300;
-      const A3_W_MM = 420;
-      const A3_H_MM = 297;
-      const pxW = Math.round(A3_W_MM * DPI / 25.4);  // ~4961px
-      const pxH = Math.round(A3_H_MM * DPI / 25.4);  // ~3508px
+      // 用紙サイズ（既定A3・横置き）。出力範囲プレビューと同じ Utils.PAPER を使用。
+      const paperName = (typeof app !== 'undefined' && app.titleBlock?.data?.paper) || 'A3';
+      const paper = Utils.paperDims(paperName);
+      const DPI = 300; // crisp output
+      const PAGE_W_MM = paper.w;
+      const PAGE_H_MM = paper.h;
+      const pxW = Math.round(PAGE_W_MM * DPI / 25.4);
+      const pxH = Math.round(PAGE_H_MM * DPI / 25.4);
 
       progressFill.style.width = '10%';
       loadingText.textContent = 'SVGを準備中...';
@@ -54,11 +55,11 @@ class PDFExporter {
       const doc = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
-        format: 'a3'
+        format: paper.format
       });
 
       // Add rendered image to PDF
-      doc.addImage(imgData, 'JPEG', 0, 0, A3_W_MM, A3_H_MM, undefined, 'FAST');
+      doc.addImage(imgData, 'JPEG', 0, 0, PAGE_W_MM, PAGE_H_MM, undefined, 'FAST');
 
       progressFill.style.width = '90%';
       loadingText.textContent = 'PDFを保存中...';
@@ -195,13 +196,12 @@ class PDFExporter {
     const scaleStr = (typeof app !== 'undefined' && app.titleBlock?.data?.scale) || '';
     const scaleN = Utils.parseScale(scaleStr);
 
-    const A3_W_MM = 420;
-    const A3_H_MM = 297;
+    const paper = Utils.paperDims((typeof app !== 'undefined' && app.titleBlock?.data?.paper) || 'A3');
 
     if (scaleN) {
-      // Scale-based viewBox: A3 paper dimensions × scale ratio → real-world area in meters
-      const vbW = A3_W_MM * scaleN / 1000; // e.g. 420 * 100 / 1000 = 42m
-      const vbH = A3_H_MM * scaleN / 1000; // e.g. 297 * 100 / 1000 = 29.7m
+      // Scale-based viewBox: 用紙寸法 × 縮尺 → 実空間の出力範囲(m)
+      const vbW = paper.w * scaleN / 1000; // 例: 420 * 100 / 1000 = 42m
+      const vbH = paper.h * scaleN / 1000; // 例: 297 * 100 / 1000 = 29.7m
 
       // Use export boundary position if available, otherwise fall back to viewport center
       const eb = (typeof app !== 'undefined' && app.exportBoundary?.bounds);
