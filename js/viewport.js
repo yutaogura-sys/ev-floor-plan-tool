@@ -155,7 +155,11 @@ class Viewport {
 
   // Fit view to DXF extents
   fitToExtents(customBounds) {
-    const b = customBounds || this.bounds;
+    let b = customBounds || this.bounds;
+    // DXF範囲が無い（DXF未読込で注釈のみ）場合は描画済み注釈の範囲にフィット
+    if (!b || !isFinite(b.minX)) {
+      b = this._annotationBounds();
+    }
     if (!b || !isFinite(b.minX)) return;
 
     const rect = this.container.getBoundingClientRect();
@@ -182,6 +186,18 @@ class Viewport {
     const vbY = svgMinY - padding - (vbHeight - height - padding * 2) / 2;
 
     this.setViewBox(vbX, vbY, vbWidth, vbHeight);
+  }
+
+  // 描画済み注釈レイヤーの範囲をDXF座標のbounds {minX,minY,maxX,maxY} で返す（無ければnull）。
+  // SVGはY反転のため、SVG bbox から変換する。
+  _annotationBounds() {
+    try {
+      const layer = document.getElementById('annotation-layer');
+      if (!layer) return null;
+      const bb = layer.getBBox();
+      if (!bb || bb.width === 0 || bb.height === 0) return null;
+      return { minX: bb.x, maxX: bb.x + bb.width, minY: -(bb.y + bb.height), maxY: -bb.y };
+    } catch (e) { return null; }
   }
 
   setBounds(bounds) {

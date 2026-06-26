@@ -63,6 +63,8 @@ class AIReader {
           if (r) results.push(r);
         }
         if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+        // 配置結果が画面に収まるようビューをフィット（結果が見えないのを防ぐ）
+        if (typeof app !== 'undefined' && app.viewport && app.viewport.fitToExtents) app.viewport.fitToExtents();
         Utils.toast(`${results.length}件をAI読取から配置しました。`, 'info');
       }, () => { /* キャンセル */ });
     } catch (err) {
