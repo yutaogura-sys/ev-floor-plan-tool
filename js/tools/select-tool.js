@@ -725,6 +725,9 @@ class SelectTool {
       if (prop === 'height') this.selected.dataset.height = parseFloat(value) / 1000;
       this._rebuildBoundaryRect(this.selected);
     }
+
+    // パネル編集を履歴に記録（フェーズ1: 重複スナップショットは updateChecklist 側で抑制）
+    if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
   }
 
   _rebuildChargingSpace(el) {
@@ -872,6 +875,14 @@ class SelectTool {
     lbl.textContent = `PB ${material} ${size}`;
     el.appendChild(lbl);
     this.svgEngine.showSelection(el);
+  }
+
+  // 外部（配置系ツール）から新規要素を選択してプロパティパネルを開く
+  selectElement(element) {
+    if (!element) return;
+    this.selected = element;
+    this.svgEngine.showSelection(element);
+    this._showProperties(element);
   }
 
   _clearProperties() {
