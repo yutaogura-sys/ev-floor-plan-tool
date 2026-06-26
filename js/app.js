@@ -491,6 +491,16 @@ class App {
       if (key === 'z' && !e.shiftKey) { e.preventDefault(); this.doUndo(); }
       else if (key === 'y' || (key === 'z' && e.shiftKey)) { e.preventDefault(); this.doRedo(); }
     });
+    const saveBtn = document.getElementById('btn-save-project');
+    const openBtn = document.getElementById('btn-open-project');
+    const openInput = document.getElementById('file-open-project');
+    if (saveBtn) saveBtn.addEventListener('click', () => this.saveProject());
+    if (openBtn && openInput) openBtn.addEventListener('click', () => openInput.click());
+    if (openInput) openInput.addEventListener('change', (e) => {
+      const f = e.target.files[0];
+      this.openProjectFile(f);
+      e.target.value = '';
+    });
     this._updateHistoryButtons();
   }
 
@@ -524,6 +534,55 @@ class App {
     const redoBtn = document.getElementById('btn-redo');
     if (undoBtn) undoBtn.disabled = !this.history.canUndo();
     if (redoBtn) redoBtn.disabled = !this.history.canRedo();
+  }
+
+  // ===== 保存 / 読込 =====
+  _currentDxfName() {
+    const el = document.getElementById('dxf-name');
+    const v = el ? el.textContent : '';
+    return (v && v !== '未選択') ? v : null;
+  }
+
+  saveProject() {
+    const tbData = (this.titleBlock && this.titleBlock.data) ? this.titleBlock.data : {};
+    const viewBox = this.svgElement.getAttribute('viewBox');
+    const state = StateSerializer.serializeProject(this.svgEngine, tbData, viewBox, this._currentDxfName());
+    const json = JSON.stringify(state, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const site = (tbData.siteName || 'project').replace(/[\\/:*?"<>|]/g, '_');
+    const today = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `${site}_${today}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async openProjectFile(file) {
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const state = JSON.parse(text);
+      const { titleBlock, viewBox } = StateSerializer.deserializeProject(this.svgEngine, state);
+      // タイトルブロック復元
+      if (this.titleBlock && titleBlock) {
+        Object.assign(this.titleBlock.data, titleBlock);
+        this.titleBlock.render();
+      }
+      // viewBox復元
+      if (viewBox) this.svgElement.setAttribute('viewBox', viewBox);
+      this.updateChecklist();
+      // 履歴を初期化
+      this.history.reset(StateSerializer.snapshot(this.svgEngine));
+      this._updateHistoryButtons();
+      alert('プロジェクトを読み込みました。DXF/参照PDFは別途再読込してください。');
+    } catch (err) {
+      console.error('プロジェクト読込エラー:', err);
+      alert('プロジェクトファイルの読み込みに失敗しました: ' + err.message);
+    }
   }
 }
 

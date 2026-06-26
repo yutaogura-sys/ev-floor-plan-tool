@@ -248,6 +248,22 @@ const StateSerializer = {
     let records = [];
     try { records = JSON.parse(snapshotString) || []; } catch (e) { records = []; }
     return this.deserializeAnnotations(svgEngine, records);
+  },
+
+  serializeProject(svgEngine, titleBlockData, viewBox, dxfName) {
+    return {
+      version: 1,
+      savedAt: new Date().toISOString(),
+      titleBlock: titleBlockData || {},
+      dxf: { fileName: dxfName || null, loaded: !!dxfName },
+      annotations: this.serializeAnnotations(svgEngine),
+      viewBox: viewBox || null
+    };
+  },
+
+  deserializeProject(svgEngine, state) {
+    const result = this.deserializeAnnotations(svgEngine, (state && state.annotations) || []);
+    return { result, titleBlock: (state && state.titleBlock) || {}, viewBox: (state && state.viewBox) || null };
   }
 };
 
