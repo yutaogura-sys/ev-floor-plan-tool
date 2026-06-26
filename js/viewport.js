@@ -163,7 +163,10 @@ class Viewport {
     if (!b || !isFinite(b.minX)) return;
 
     const rect = this.container.getBoundingClientRect();
-    const aspect = rect.width / rect.height;
+    // コンテナが0サイズ/未レイアウト（パネル折りたたみ・最小化・描画前）でも
+    // aspect が 0/Infinity/NaN にならないよう保険（不正だと viewBox が壊れる）
+    let aspect = rect.width / rect.height;
+    if (!isFinite(aspect) || aspect <= 0) aspect = 1;
 
     // DXF Y is flipped in SVG
     const svgMinY = -b.maxY;
@@ -171,7 +174,8 @@ class Viewport {
     const width = b.maxX - b.minX;
     const height = svgMaxY - svgMinY;
 
-    const padding = Math.max(width, height) * 0.05;
+    // 単一点（width=height=0）でも padding>0 を保証
+    const padding = Math.max(width, height, 1) * 0.05;
     let vbWidth = width + padding * 2;
     let vbHeight = height + padding * 2;
 
@@ -184,6 +188,9 @@ class Viewport {
 
     const vbX = b.minX - padding - (vbWidth - width - padding * 2) / 2;
     const vbY = svgMinY - padding - (vbHeight - height - padding * 2) / 2;
+
+    // 念のため非有限な viewBox は設定しない（壊れた表示を防ぐ）
+    if (![vbX, vbY, vbWidth, vbHeight].every(Number.isFinite) || vbWidth <= 0 || vbHeight <= 0) return;
 
     this.setViewBox(vbX, vbY, vbWidth, vbHeight);
   }
