@@ -11,6 +11,12 @@ node_modules/
 output-*.png
 ref-*.png
 
+# サブエージェント駆動開発の作業用スクラッチ（ブリーフ/レポート/進捗ledger）
+.superpowers/
+
+# ログ
+*.log
+
 # OS
 Thumbs.db
 .DS_Store
