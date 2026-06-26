@@ -36,6 +36,20 @@ class SelectTool {
       return;
     }
 
+    // 詳細ラベルのドラッグ（#4）: 選択中グループの detail-label テキストを掴んだら label-drag へ
+    if (this.selected && e && e.target && e.target.classList &&
+        e.target.classList.contains('detail-label') &&
+        !e.target.classList.contains('leader-connector') &&
+        this.selected.contains(e.target)) {
+      this.isLabelDragging = true;
+      this.labelDragStart = { x: point.x, y: point.y };
+      this.labelOffsetStart = {
+        dx: parseFloat(this.selected.dataset.labelDx || 0) || 0,
+        dy: parseFloat(this.selected.dataset.labelDy || 0) || 0
+      };
+      return;
+    }
+
     const ann = this.svgEngine.findAnnotationAt(point.x, point.y);
     if (ann) {
       this.selected = ann;
@@ -57,6 +71,17 @@ class SelectTool {
   }
 
   onMouseMove(point, e) {
+    // 詳細ラベルのドラッグ（#4）
+    if (this.isLabelDragging && this.selected) {
+      const ddx = point.x - this.labelDragStart.x;
+      const ddy = point.y - this.labelDragStart.y;
+      this.selected.dataset.labelDx = this.labelOffsetStart.dx + ddx;
+      this.selected.dataset.labelDy = this.labelOffsetStart.dy + ddy;
+      this.svgEngine.applyLabelOffset(this.selected);
+      this.svgEngine.showSelection(this.selected);
+      return;
+    }
+
     // Rotation drag
     if (this.isRotating && this.selected) {
       this._doRotate(point);
@@ -104,10 +129,11 @@ class SelectTool {
   }
 
   onMouseUp(point, e) {
-    const wasManipulating = this.isDragging || this.isScaling || this.isRotating;
+    const wasManipulating = this.isDragging || this.isScaling || this.isRotating || this.isLabelDragging;
     this.isDragging = false;
     this.isScaling = false;
     this.isRotating = false;
+    this.isLabelDragging = false;
     if (this.selected) {
       this.svgEngine.showSelection(this.selected);
       this._showProperties(this.selected);

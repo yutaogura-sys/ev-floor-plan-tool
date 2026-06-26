@@ -196,6 +196,9 @@ const StateSerializer = {
       rec[f.name] = this._coerce(f.kind, dataset[f.key]);
     }
     if (dataset.figure !== undefined) rec.figure = dataset.figure;
+    // 詳細ラベルの手動オフセット（#4）。0/未設定は保持しない（スナップショット差分を増やさない）。
+    if (dataset.labelDx !== undefined && parseFloat(dataset.labelDx)) rec.labelDx = parseFloat(dataset.labelDx);
+    if (dataset.labelDy !== undefined && parseFloat(dataset.labelDy)) rec.labelDy = parseFloat(dataset.labelDy);
     return rec;
   },
 
@@ -237,6 +240,12 @@ const StateSerializer = {
       try {
         const el = svgEngine[call.method].apply(svgEngine, call.args);
         if (el && rec.figure) el.setAttribute('data-figure', rec.figure);
+        // 詳細ラベルの手動オフセット（#4）を復元
+        if (el && (rec.labelDx || rec.labelDy)) {
+          el.dataset.labelDx = rec.labelDx || 0;
+          el.dataset.labelDy = rec.labelDy || 0;
+          if (typeof svgEngine.applyLabelOffset === 'function') svgEngine.applyLabelOffset(el);
+        }
       } catch (e) {
         skipped++;
         console.warn('注釈の復元に失敗:', rec.type, rec.id, e);
