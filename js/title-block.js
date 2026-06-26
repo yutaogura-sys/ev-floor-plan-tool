@@ -126,14 +126,14 @@ class TitleBlock {
     // Main border
     this.layer.appendChild(Utils.createSVGElement('rect', {
       x, y, width: blockWidth, height: blockHeight,
-      fill: 'white', stroke: '#333', 'stroke-width': sw * 2
+      fill: 'white', stroke: Utils.COLORS.ink, 'stroke-width': sw * 2
     }));
 
     // Row divider (horizontal middle line)
     const midY = y + rowHeight;
     this.layer.appendChild(Utils.createSVGElement('line', {
       x1: x, y1: midY, x2: x + blockWidth, y2: midY,
-      stroke: '#333', 'stroke-width': sw
+      stroke: Utils.COLORS.ink, 'stroke-width': sw
     }));
 
     // Column positions (proportional within blockWidth=16m)
@@ -148,7 +148,7 @@ class TitleBlock {
     [col1, col2, col3, col4].forEach(cx => {
       this.layer.appendChild(Utils.createSVGElement('line', {
         x1: cx, y1: y, x2: cx, y2: y + blockHeight,
-        stroke: '#333', 'stroke-width': sw
+        stroke: Utils.COLORS.ink, 'stroke-width': sw
       }));
     });
 
@@ -184,7 +184,7 @@ class TitleBlock {
     const el = Utils.createSVGElement('text', {
       x, y,
       'font-size': fontSize,
-      fill: '#333',
+      fill: Utils.COLORS.ink,
       'font-family': 'Meiryo, sans-serif',
       'text-anchor': anchor === 'middle' ? 'middle' : anchor === 'end' ? 'end' : 'start',
       'font-weight': weight

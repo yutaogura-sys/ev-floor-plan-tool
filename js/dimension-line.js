@@ -21,12 +21,12 @@ const DimensionRenderer = {
     groupEl.appendChild(Utils.createSVGElement('line', {
       x1: x1 - tickSize * 0.3, y1: dimY - tickSize * 0.3,
       x2: x1 + tickSize * 0.3, y2: dimY + tickSize * 0.3,
-      stroke: '#0066cc', 'stroke-width': 0.05
+      stroke: Utils.COLORS.blue, 'stroke-width': 0.05
     }));
     groupEl.appendChild(Utils.createSVGElement('line', {
       x1: x2 - tickSize * 0.3, y1: dimY - tickSize * 0.3,
       x2: x2 + tickSize * 0.3, y2: dimY + tickSize * 0.3,
-      stroke: '#0066cc', 'stroke-width': 0.05
+      stroke: Utils.COLORS.blue, 'stroke-width': 0.05
     }));
 
     // Dimension line
@@ -66,12 +66,12 @@ const DimensionRenderer = {
     groupEl.appendChild(Utils.createSVGElement('line', {
       x1: dimX - tickSize * 0.3, y1: y1 - tickSize * 0.3,
       x2: dimX + tickSize * 0.3, y2: y1 + tickSize * 0.3,
-      stroke: '#0066cc', 'stroke-width': 0.05
+      stroke: Utils.COLORS.blue, 'stroke-width': 0.05
     }));
     groupEl.appendChild(Utils.createSVGElement('line', {
       x1: dimX - tickSize * 0.3, y1: y2 - tickSize * 0.3,
       x2: dimX + tickSize * 0.3, y2: y2 + tickSize * 0.3,
-      stroke: '#0066cc', 'stroke-width': 0.05
+      stroke: Utils.COLORS.blue, 'stroke-width': 0.05
     }));
 
     // Dimension line

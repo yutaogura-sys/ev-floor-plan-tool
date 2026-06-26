@@ -58,7 +58,7 @@ class ChargingSpaceTool {
     this.preview = Utils.createSVGElement('rect', {
       x, y, width: 0, height: 0,
       fill: 'rgba(204,0,0,0.05)',
-      stroke: '#cc0000',
+      stroke: Utils.COLORS.evRed,
       'stroke-width': 0.08
     });
     document.getElementById('interaction-layer').appendChild(this.preview);

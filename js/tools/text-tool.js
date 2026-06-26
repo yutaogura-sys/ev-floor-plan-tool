@@ -13,7 +13,7 @@ class TextTool {
     if (!text) return;
 
     const id = Utils.generateId();
-    this.svgEngine.createTextAnnotation(id, point.x, point.y, text, 3, '#333');
+    this.svgEngine.createTextAnnotation(id, point.x, point.y, text, 3, Utils.COLORS.ink);
   }
 
   onDoubleClick(point, e) {

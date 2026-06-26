@@ -3,9 +3,9 @@
 class FigureLayerManager {
   constructor() {
     this.layers = {
-      plan:   { visible: true, color: '#cc0000', label: '平面図専用' },
+      plan:   { visible: true, color: Utils.COLORS.evRed, label: '平面図専用' },
       route:  { visible: true, color: '#ff6600', label: '配線ルート図専用' },
-      shared: { visible: true, color: '#0066cc', label: '共通' }
+      shared: { visible: true, color: Utils.COLORS.blue, label: '共通' }
     };
   }
 

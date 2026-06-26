@@ -40,7 +40,7 @@ class ChargerTool {
     const w = 0.4, h = 0.8;
     const body = Utils.createSVGElement('rect', {
       x: -w / 2, y: -h / 2, width: w, height: h,
-      fill: 'none', stroke: '#cc0000', 'stroke-width': 0.08
+      fill: 'none', stroke: Utils.COLORS.evRed, 'stroke-width': 0.08
     });
     this.preview.appendChild(body);
 
