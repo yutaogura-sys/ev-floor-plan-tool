@@ -740,17 +740,43 @@ class App {
     const count = (state.annotations || []).length;
     if (count === 0) return;
     const when = state.savedAt ? new Date(state.savedAt).toLocaleString('ja-JP') : '不明';
-    if (confirm(`前回の作業（注釈${count}件 / ${when}）を復元しますか？`)) {
+
+    // 非ブロッキングなモーダル（旧: native confirm。ページを固めず他UIと体裁を統一）
+    const overlay = document.createElement('div');
+    overlay.className = 'restore-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10001;display:flex;align-items:center;justify-content:center;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#fff;color:#222;max-width:420px;width:90%;border-radius:8px;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,0.3);font-family:Meiryo,sans-serif;font-size:13px;';
+    box.innerHTML =
+      '<h3 style="margin:0 0 10px;font-size:15px;">前回の作業を復元しますか？</h3>' +
+      `<p style="margin:0 0 16px;color:#444;">注釈 ${count} 件 / ${when}</p>` +
+      '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
+      '<button class="rs-discard" style="padding:7px 14px;border:1px solid #999;border-radius:4px;background:#f2f2f2;cursor:pointer;">破棄</button>' +
+      '<button class="rs-restore" style="padding:7px 14px;border:none;border-radius:4px;background:#1a6ed8;color:#fff;cursor:pointer;">復元する</button>' +
+      '</div>';
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    const close = () => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); };
+
+    box.querySelector('.rs-restore').addEventListener('click', () => {
+      close();
       const { titleBlock, viewBox } = StateSerializer.deserializeProject(this.svgEngine, state);
-      if (this.titleBlock && titleBlock) { Object.assign(this.titleBlock.data, titleBlock); this.titleBlock.render(); }
+      if (this.titleBlock && titleBlock) {
+        Object.assign(this.titleBlock.data, titleBlock);
+        if (this.titleBlock.syncInputs) this.titleBlock.syncInputs();
+        this.titleBlock.render();
+      }
       if (viewBox) this.svgElement.setAttribute('viewBox', viewBox);
       this.updateChecklist();
       this.history.reset(StateSerializer.snapshot(this.svgEngine));
       this._updateHistoryButtons();
-    } else {
-      // 復元を断ったら古い自動保存を消し、次回起動時に再度尋ねないようにする
+      if (Utils.toast) Utils.toast('前回の作業を復元しました。');
+    });
+    box.querySelector('.rs-discard').addEventListener('click', () => {
+      close();
+      // 破棄したら古い自動保存を消し、次回起動時に再度尋ねない
       try { localStorage.removeItem('ev-floorplan-autosave'); } catch (e) { /* ignore */ }
-    }
+    });
   }
 }
 
