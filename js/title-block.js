@@ -105,6 +105,21 @@ class TitleBlock {
       }
     }
 
+    // DXF が無い場合は注釈レイヤーの範囲にフォールバック（注釈のみ作図でも図枠を描画）
+    if (!bounds && this.svgEngine && this.svgEngine.annotationLayer) {
+      try {
+        const bbox = this.svgEngine.annotationLayer.getBBox();
+        if (bbox.width > 0) {
+          bounds = {
+            minX: bbox.x,
+            maxX: bbox.x + bbox.width,
+            minY: bbox.y,
+            maxY: bbox.y + bbox.height
+          };
+        }
+      } catch (e) { /* getBBox は未レンダリング時に throw しうる */ }
+    }
+
     if (!bounds) return;
 
     const S = this.svgEngine.S;

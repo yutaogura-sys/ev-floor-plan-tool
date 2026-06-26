@@ -497,6 +497,12 @@ class App {
       this.exportBoundary.update();
     }
 
+    // DXF未読込（注釈のみ作図）ではタイトルブロックを注釈範囲に追従して再描画
+    // （DXF読込時は読込時に確定位置で描画済みのため不要）
+    if (!this.state.dxfData && this.titleBlock && this.titleBlock.render) {
+      this.titleBlock.render();
+    }
+
     // 注釈の変化を検知して履歴に記録（restore中とredo履歴の同一スナップショットは抑制）
     if (this.history && !this._restoring) {
       const snap = StateSerializer.snapshot(this.svgEngine);
