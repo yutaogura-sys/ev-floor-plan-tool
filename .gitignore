@@ -17,6 +17,11 @@ ref-*.png
 # ログ
 *.log
 
+# Playwright E2E 成果物
+test-results/
+playwright-report/
+.playwright/
+
 # OS
 Thumbs.db
 .DS_Store

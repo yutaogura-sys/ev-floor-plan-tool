@@ -39,6 +39,17 @@ node server.js
 npm test
 ```
 
+### E2E テスト（Playwright）
+
+主要な操作フロー（ツール切替・詳細ラベルトグル・出力前チェック・レスポンシブ等）を
+ヘッドレス Chromium で検証します。初回のみブラウザを取得してください。
+
+```bash
+npm install                      # devDependency の @playwright/test を取得
+npx playwright install chromium  # 初回のみ（ブラウザ本体を取得）
+npm run test:e2e                 # server.js を自動起動して実行（既定ポート 8181）
+```
+
 ## ライセンス
 
 社内利用ツール。
