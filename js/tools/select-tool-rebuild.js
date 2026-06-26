@@ -10,7 +10,7 @@
       const S = this.svgEngine.S;
       const x = parseFloat(el.dataset.x);
       const y = parseFloat(el.dataset.y);
-      const color = el.dataset.color || '#333';
+      const color = el.dataset.color || Utils.COLORS.ink;
       const oldTextEl = el.querySelector('text');
       const fontSize = oldTextEl ? parseFloat(oldTextEl.getAttribute('font-size')) : S.fontMedium;
       while (el.firstChild) el.removeChild(el.firstChild);
@@ -28,7 +28,7 @@
 
     _rebuildLeader(el, newText) {
       const S = this.svgEngine.S;
-      const color = el.dataset.color || '#009933';
+      const color = el.dataset.color || Utils.COLORS.green;
       // Preserve line and circle (first 2 children), replace text elements
       const lineEl = el.querySelector('line');
       const circleEl = el.querySelector('circle');
