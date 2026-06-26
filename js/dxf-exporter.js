@@ -43,7 +43,7 @@ class DXFExporter {
       setTimeout(() => overlay.classList.add('hidden'), 800);
     } catch (err) {
       console.error('DXF export error:', err);
-      alert('DXF出力に失敗しました: ' + err.message);
+      Utils.toast('DXF出力に失敗しました: ' + err.message, 'error');
       overlay.classList.add('hidden');
     }
   }

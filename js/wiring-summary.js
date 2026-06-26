@@ -50,7 +50,7 @@ class WiringSummary {
   generate(x, y) {
     const data = this.collectData();
     if (data.length === 0) {
-      alert('配線ルートが見つかりません。先に配線ルートを描画してください。');
+      Utils.toast('配線ルートが見つかりません。先に配線ルートを描画してください。', 'error');
       return;
     }
 

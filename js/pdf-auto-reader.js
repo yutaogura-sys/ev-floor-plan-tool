@@ -185,6 +185,8 @@ class PDFAutoReader {
         if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
         this._showNotification(`${results.length}件の注釈を配置しました。`);
         resolve({ count: results.length, items: results });
+      }, () => {
+        resolve({ count: 0, items: [] });
       });
     });
   }

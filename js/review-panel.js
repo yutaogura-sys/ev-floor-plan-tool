@@ -20,8 +20,9 @@ class ReviewPanel {
     this.modal = null;
   }
 
-  show(candidates, onConfirm) {
+  show(candidates, onConfirm, onCancel) {
     this._close();
+    candidates = candidates || [];
     const overlay = document.createElement('div');
     overlay.className = 'review-modal-overlay';
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10001;display:flex;align-items:center;justify-content:center;';
@@ -63,8 +64,8 @@ class ReviewPanel {
 
     box.querySelector('.rv-all').addEventListener('click', () => box.querySelectorAll('.rv-adopt').forEach(c => c.checked = true));
     box.querySelector('.rv-none').addEventListener('click', () => box.querySelectorAll('.rv-adopt').forEach(c => c.checked = false));
-    box.querySelector('.rv-cancel').addEventListener('click', () => this._close());
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) this._close(); });
+    box.querySelector('.rv-cancel').addEventListener('click', () => { this._close(); if (typeof onCancel === 'function') onCancel(); });
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) { this._close(); if (typeof onCancel === 'function') onCancel(); } });
     box.querySelector('.rv-confirm').addEventListener('click', () => {
       const result = candidates.map((cand, i) => {
         const adopt = box.querySelector(`.rv-adopt[data-i="${i}"]`);
@@ -82,7 +83,7 @@ class ReviewPanel {
   }
 
   _escape(s) {
-    return String(s == null ? '' : s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+    return String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   }
 }
 

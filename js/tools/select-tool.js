@@ -605,6 +605,8 @@ class SelectTool {
         } catch (err) {
           console.error('Auto-read error:', err);
           autoReadBtn.textContent = '❌ エラー';
+        } finally {
+          autoReadBtn.disabled = false;
         }
       });
     }
@@ -656,6 +658,7 @@ class SelectTool {
     // Handle figure layer change specially (it's an attribute, not dataset)
     if (prop === 'figure') {
       this.selected.setAttribute('data-figure', value);
+      if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
       return;
     }
 
@@ -951,7 +954,7 @@ class SelectTool {
   _alignToNearestWall() {
     if (!this.selected || this.selected.dataset.type !== 'charging-space') return;
     if (typeof app === 'undefined' || !app.state.dxfData) {
-      alert('DXFデータが読み込まれていません。');
+      Utils.toast('DXFデータが読み込まれていません。', 'error');
       return;
     }
 
@@ -1043,7 +1046,7 @@ class SelectTool {
     }
 
     if (bestDist === Infinity) {
-      alert('近くの建物壁が見つかりませんでした。');
+      Utils.toast('近くの建物壁が見つかりませんでした。', 'info');
       return;
     }
 
