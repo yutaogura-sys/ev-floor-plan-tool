@@ -351,7 +351,7 @@ class SVGEngine {
     const group = Utils.createSVGElement('g', {
       'data-id': id, 'data-type': 'charger', 'data-figure': 'shared',
       'data-x': x, 'data-y': y, 'data-rotation': rotation,
-      'data-stand-type': standType,
+      'data-stand-type': standType, 'data-label': label,
       transform: `translate(${x},${y}) rotate(${rotation})`
     });
 
@@ -406,7 +406,7 @@ class SVGEngine {
     const size = 0.9; // 900mm
     const group = Utils.createSVGElement('g', {
       'data-id': id, 'data-type': 'road-marking', 'data-figure': 'plan',
-      'data-x': x, 'data-y': y
+      'data-x': x, 'data-y': y, 'data-surface-type': surfaceType
     });
 
     group.appendChild(Utils.createSVGElement('rect', {
@@ -447,7 +447,7 @@ class SVGEngine {
     const S = this.S;
     const group = Utils.createSVGElement('g', {
       'data-id': id, 'data-type': 'wheel-stop', 'data-figure': 'plan',
-      'data-x': x, 'data-y': y,
+      'data-x': x, 'data-y': y, 'data-rotation': rotation,
       transform: `translate(${x},${y}) rotate(${rotation})`
     });
     group.appendChild(Utils.createSVGElement('rect', {
@@ -500,7 +500,8 @@ class SVGEngine {
     const S = this.S;
     const group = Utils.createSVGElement('g', {
       'data-id': id, 'data-type': 'foundation', 'data-figure': 'plan',
-      'data-x': x, 'data-y': y, 'data-width': width, 'data-height': height
+      'data-x': x, 'data-y': y, 'data-width': width, 'data-height': height,
+      'data-depth': depth, 'data-material': material
     });
 
     group.appendChild(Utils.createSVGElement('rect', {
@@ -537,9 +538,12 @@ class SVGEngine {
   // ===== Leader Line Annotation (text with pointing line) =====
   createLeaderAnnotation(id, targetX, targetY, textX, textY, lines, color = '#009933') {
     const S = this.S;
+    const lineArrayForData = Array.isArray(lines) ? lines : [lines];
     const group = Utils.createSVGElement('g', {
       'data-id': id, 'data-type': 'leader', 'data-figure': 'shared',
-      'data-x': targetX, 'data-y': targetY, 'data-color': color
+      'data-x': targetX, 'data-y': targetY, 'data-color': color,
+      'data-text-x': textX, 'data-text-y': textY,
+      'data-lines': JSON.stringify(lineArrayForData)
     });
 
     // Leader line from target to text
@@ -581,7 +585,8 @@ class SVGEngine {
 
     const group = Utils.createSVGElement('g', {
       'data-id': id, 'data-type': 'dimension', 'data-figure': 'shared',
-      'data-x': x1, 'data-y': y1, 'data-color': color
+      'data-x': x1, 'data-y': y1, 'data-x2': x2, 'data-y2': y2,
+      'data-label-override': labelOverride || '', 'data-color': color
     });
 
     const dx = x2 - x1;
@@ -733,7 +738,8 @@ class SVGEngine {
     const actualSize = fontSize ? fontSize * 0.1 : S.fontMedium; // Convert if legacy size passed
     const group = Utils.createSVGElement('g', {
       'data-id': id, 'data-type': 'text', 'data-figure': 'shared',
-      'data-x': x, 'data-y': y, 'data-color': color
+      'data-x': x, 'data-y': y, 'data-color': color,
+      'data-text': text, 'data-font-size': (fontSize !== undefined && fontSize !== null) ? fontSize : ''
     });
     // Support multi-line text (split by \n)
     const lines = text.split('\n');
@@ -883,7 +889,7 @@ class SVGEngine {
     const S = this.S;
     const group = Utils.createSVGElement('g', {
       'data-id': id, 'data-type': 'existing-charger', 'data-figure': 'route',
-      'data-x': x, 'data-y': y, 'data-rotation': rotation,
+      'data-x': x, 'data-y': y, 'data-rotation': rotation, 'data-label': label,
       transform: `translate(${x},${y}) rotate(${rotation})`
     });
 
@@ -1000,7 +1006,8 @@ class SVGEngine {
     const S = this.S;
     const group = Utils.createSVGElement('g', {
       'data-id': id, 'data-type': 'wiring-summary', 'data-figure': 'route',
-      'data-x': x, 'data-y': y
+      'data-x': x, 'data-y': y,
+      'data-summary-data': JSON.stringify(summaryData)
     });
 
     const fs = S.fontSmall * 0.7;
