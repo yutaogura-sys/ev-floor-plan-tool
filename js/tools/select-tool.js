@@ -723,7 +723,7 @@ class SelectTool {
 
     // Rebuild pullbox when properties change
     if (type === 'pullbox' && (prop === 'pbSize' || prop === 'material')) {
-      this._rebuildPullBox(this.selected);
+      this._regenerateSelected();
     }
 
     // Rebuild charger when stand type changes
@@ -738,7 +738,7 @@ class SelectTool {
       // Width/height are stored in meters in dataset but input is in mm
       if (prop === 'width') this.selected.dataset.width = parseFloat(value) / 1000;
       if (prop === 'height') this.selected.dataset.height = parseFloat(value) / 1000;
-      this._rebuildChargingSpace(this.selected);
+      this._regenerateSelected();
     }
 
     // Handle color changes for text/dimension/leader/boundary-rect
@@ -753,7 +753,7 @@ class SelectTool {
       } else if (type === 'dimension') {
         this._rebuildDimension(this.selected, value);
       } else if (type === 'boundary-rect') {
-        this._rebuildBoundaryRect(this.selected);
+        this._regenerateSelected();
       }
     }
 
@@ -777,7 +777,7 @@ class SelectTool {
     if (type === 'boundary-rect' && (prop === 'width' || prop === 'height')) {
       if (prop === 'width') this.selected.dataset.width = parseFloat(value) / 1000;
       if (prop === 'height') this.selected.dataset.height = parseFloat(value) / 1000;
-      this._rebuildBoundaryRect(this.selected);
+      this._regenerateSelected();
     }
 
     // Rebuild foundation when dimensions/material change
@@ -785,7 +785,7 @@ class SelectTool {
       if (prop === 'width') this.selected.dataset.width = parseFloat(value) / 1000;
       else if (prop === 'height') this.selected.dataset.height = parseFloat(value) / 1000;
       else if (prop === 'depth') this.selected.dataset.depth = parseFloat(value) / 1000;
-      this._rebuildFoundation(this.selected);
+      this._regenerateSelected();
     }
 
     // pole/cubicle/existing-charger はラベル等の編集をデータから作り直して反映（change=blur時）
