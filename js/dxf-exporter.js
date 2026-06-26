@@ -110,6 +110,8 @@ class DXFExporter {
     });
 
     if (minX === Infinity) { minX = 0; minY = 0; maxX = 100; maxY = 100; }
+    // NaN/Infinity が紛れた場合のフォールバック（$EXTMIN/$EXTMAX に "NaN"/"Infinity" を出さない）
+    if (![minX, minY, maxX, maxY].every(Number.isFinite)) { minX = 0; minY = 0; maxX = 100; maxY = 100; }
     return { minX, minY, maxX, maxY };
   }
 
@@ -303,34 +305,35 @@ class DXFExporter {
   _emitChargingSpace(el) {
     const layer = 'EV_CHARGING_SPACE';
     const aci = 1;
-    const cx = parseFloat(el.dataset.x);
-    const cy = parseFloat(el.dataset.y);
+    // createChargingSpace は transform="translate(x,y) rotate(rot)" + rect(0,0,w,h)。
+    // つまり (x,y) は矩形の左上角＝回転中心（中心ではない）。SVG/PDF と一致させるため
+    // ローカル角 (0,0)-(w,h) を原点まわりで回転→(x0,y0) へ平行移動する。
+    const x0 = parseFloat(el.dataset.x);
+    const y0 = parseFloat(el.dataset.y);
     const w = parseFloat(el.dataset.width) || 2.5;
     const h = parseFloat(el.dataset.height) || 5.0;
     const rot = parseFloat(el.dataset.rotation) || 0;
     const num = el.dataset.number || '';
 
-    // Rectangle corners in local coords (centered at origin)
-    const hw = w / 2, hh = h / 2;
     const corners = [
-      { x: -hw, y: -hh }, { x: hw, y: -hh },
-      { x: hw, y: hh }, { x: -hw, y: hh }
+      { x: 0, y: 0 }, { x: w, y: 0 },
+      { x: w, y: h }, { x: 0, y: h }
     ];
-
-    // Rotate and translate, then convert to DXF Y
     const dxfCorners = corners.map(c => {
       const r = this._rotatePoint(c.x, c.y, 0, 0, rot);
-      return { x: cx + r.x, y: -(cy + r.y) };
+      return { x: x0 + r.x, y: -(y0 + r.y) };
     });
 
     let out = this._dxfPolyline(layer, aci, dxfCorners, true);
 
-    // Label text
+    // Label text（ローカル中心 (w/2,h/2) 付近。SVG の桁数表記に合わせる）
     const label = `【充電スペース${num}】`;
-    const dimText = `幅${w.toFixed(2)}m×奥行${h.toFixed(2)}m`;
-    const dxfCy = -cy;
-    out += this._dxfText(layer, aci, cx, dxfCy, 0.2, label, rot, 1);
-    out += this._dxfText(layer, aci, cx, dxfCy - 0.3, 0.15, dimText, rot, 1);
+    const dimText = `幅${w.toFixed(2)}m×奥行${h.toFixed(1)}m`;
+    const c = this._rotatePoint(w / 2, h / 2, 0, 0, rot);
+    const lx = x0 + c.x;
+    const ly = -(y0 + c.y);
+    out += this._dxfText(layer, aci, lx, ly, 0.2, label, rot, 1);
+    out += this._dxfText(layer, aci, lx, ly - 0.3, 0.15, dimText, rot, 1);
 
     return out;
   }

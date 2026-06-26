@@ -172,11 +172,18 @@ Object.assign(SVGEngine.prototype, {
   // Benchmark style: red lines with multi-line annotation blocks offset from route
   createWiringRoute(id, vertices, segments) {
     const S = this.S;
+    // 不正/空の routeData でも throw しないよう正規化（破損データの復元で黙って消えるのを防ぐ）
+    vertices = Array.isArray(vertices) ? vertices : [];
+    segments = Array.isArray(segments) ? segments : [];
     const group = Utils.createSVGElement('g', {
       'data-id': id, 'data-type': 'wiring-route', 'data-figure': 'route',
-      'data-x': vertices[0].x, 'data-y': vertices[0].y
+      'data-x': vertices.length ? vertices[0].x : 0, 'data-y': vertices.length ? vertices[0].y : 0
     });
     group.dataset.routeData = JSON.stringify({ vertices, segments });
+    if (vertices.length === 0) {
+      // 頂点が無ければ描画せず、データだけ保持して返す（往復で保全）
+      return this.addToGroup('wiring-routes-group', group);
+    }
 
     const routeColor = '#cc0000'; // Red — matches benchmark examples
     const methodStyles = {

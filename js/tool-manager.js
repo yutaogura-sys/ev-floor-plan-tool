@@ -93,6 +93,8 @@ class ToolManager {
 
   _initToolButtons() {
     document.querySelectorAll('.tool-btn').forEach(btn => {
+      // data-tool を持たない .tool-btn（例: 配線集計表ボタン）でツールを undefined にしない
+      if (!btn.dataset.tool) return;
       btn.addEventListener('click', () => {
         this.setActiveTool(btn.dataset.tool);
       });
@@ -149,7 +151,7 @@ class ToolManager {
         'f': 'foundation', 't': 'text',
         'r': 'wire', 'e': 'equipment', 'p': 'conduit',
         'g': 'wiring-route', 'k': 'cubicle', 'o': 'pole',
-        'j': 'handhole', 'x': 'existing-charger'
+        'j': 'handhole', 'u': 'pullbox', 'x': 'existing-charger'
       };
 
       // Forward key events to active tool first
