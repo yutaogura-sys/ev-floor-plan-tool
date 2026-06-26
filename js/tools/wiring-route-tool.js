@@ -7,6 +7,7 @@ class WiringRouteTool {
     this.previewLine = null;
     this.previewGroup = null;
     this.isDrawing = false;
+    this._finishing = false; // 仕様モーダル表示中（再入防止）
   }
 
   activate() {
@@ -22,6 +23,7 @@ class WiringRouteTool {
   }
 
   onMouseDown(point, e) {
+    if (this._finishing) return;
     // Add vertex
     this.vertices.push({ x: point.x, y: point.y });
     this.isDrawing = true;
@@ -29,11 +31,12 @@ class WiringRouteTool {
   }
 
   onMouseMove(point, e) {
-    if (!this.isDrawing || this.vertices.length === 0) return;
+    if (this._finishing || !this.isDrawing || this.vertices.length === 0) return;
     this._updatePreviewLine(point);
   }
 
   onDoubleClick(point, e) {
+    if (this._finishing) return;
     if (this.vertices.length < 2) return;
     // Remove duplicate last vertex from double-click
     if (this.vertices.length > 2) {
@@ -47,6 +50,7 @@ class WiringRouteTool {
   }
 
   onKeyDown(e) {
+    if (this._finishing) return;
     if (e.key === 'Enter' && this.vertices.length >= 2) {
       this._finishRoute();
     } else if (e.key === 'Escape') {
@@ -56,32 +60,22 @@ class WiringRouteTool {
     }
   }
 
-  _finishRoute() {
-    this._removePreview();
+  async _finishRoute() {
+    if (this._finishing) return;
+    this._finishing = true;
+    try {
+      // 1枚のモーダルで全仕様を入力（旧: prompt 4連発）。プレビューは入力中も表示。
+      const spec = await this._promptRouteSpec();
+      this._removePreview();
+      if (!spec) { this.vertices = []; this.isDrawing = false; return; }
 
-    // Route label (起点～終点) — matches benchmark annotation header
-    const routeLabel = prompt('ルート名称を入力 (例: 新設プルボックス～EV充電設備1)', '');
-    if (routeLabel === null) {
-      this.vertices = [];
-      this.isDrawing = false;
-      return;
-    }
+      const routeLabel = spec.routeLabel || '';
+      const cableSpec = spec.cableSpec || '';
+      const conduitSpec = spec.conduitSpec || '';
+      const method = spec.method || 'exposed';
 
-    // Prompt for cable spec
-    const cableSpec = prompt('ケーブル仕様を入力 (例: CV8sq-3C)', 'CV8sq-3C');
-    if (cableSpec === null) {
-      this.vertices = [];
-      this.isDrawing = false;
-      return;
-    }
-
-    const conduitSpec = prompt('配管仕様を入力 (例: PFD-28, FEP-65)', 'PFD-28');
-    const methodStr = prompt('配線方法を入力\n1=露出  2=埋設  3=架空\n(全区間同一。後からプロパティで区間ごとに変更可)', '1');
-    const methodMap = { '1': 'exposed', '2': 'buried', '3': 'aerial' };
-    const method = methodMap[methodStr] || 'exposed';
-
-    // Create segments with same spec for all
-    const segments = [];
+      // Create segments with same spec for all
+      const segments = [];
     for (let i = 0; i < this.vertices.length - 1; i++) {
       const v1 = this.vertices[i];
       const v2 = this.vertices[i + 1];
@@ -115,8 +109,57 @@ class WiringRouteTool {
       app.updateChecklist();
     }
 
-    this.vertices = [];
-    this.isDrawing = false;
+      this.vertices = [];
+      this.isDrawing = false;
+    } finally {
+      this._finishing = false;
+    }
+  }
+
+  // 配線ルート仕様の入力モーダル。確定で {routeLabel,cableSpec,conduitSpec,method}、
+  // キャンセルで null を resolve する Promise を返す（旧: native prompt 4連発の置換）。
+  _promptRouteSpec() {
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'route-spec-overlay';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:10001;display:flex;align-items:center;justify-content:center;';
+      const box = document.createElement('div');
+      box.style.cssText = 'background:#fff;color:#222;width:360px;max-width:92%;border-radius:8px;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,0.3);font-family:Meiryo,sans-serif;font-size:13px;';
+      box.innerHTML =
+        '<h3 style="margin:0 0 12px;font-size:15px;">配線ルートの仕様</h3>' +
+        '<label style="display:block;margin:8px 0 2px;">ルート名称</label>' +
+        '<input class="rs-label" type="text" placeholder="例: 新設プルボックス～EV充電設備1" style="width:100%;padding:5px;box-sizing:border-box;">' +
+        '<label style="display:block;margin:8px 0 2px;">ケーブル仕様</label>' +
+        '<input class="rs-cable" type="text" value="CV8sq-3C" style="width:100%;padding:5px;box-sizing:border-box;">' +
+        '<label style="display:block;margin:8px 0 2px;">配管仕様</label>' +
+        '<input class="rs-conduit" type="text" value="PFD-28" style="width:100%;padding:5px;box-sizing:border-box;">' +
+        '<label style="display:block;margin:8px 0 2px;">配線方法（全区間共通・後で区間別に変更可）</label>' +
+        '<select class="rs-method" style="width:100%;padding:5px;box-sizing:border-box;">' +
+        '<option value="exposed">露出</option><option value="buried">埋設</option><option value="aerial">架空</option>' +
+        '</select>' +
+        '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">' +
+        '<button class="rs-cancel" style="padding:7px 14px;border:1px solid #999;border-radius:4px;background:#f2f2f2;cursor:pointer;">キャンセル</button>' +
+        '<button class="rs-ok" style="padding:7px 14px;border:none;border-radius:4px;background:#1a6ed8;color:#fff;cursor:pointer;">確定</button>' +
+        '</div>';
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+      box.querySelector('.rs-label').focus();
+      const close = (val) => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); resolve(val); };
+      box.querySelector('.rs-ok').addEventListener('click', () => close({
+        routeLabel: box.querySelector('.rs-label').value.trim(),
+        cableSpec: box.querySelector('.rs-cable').value.trim(),
+        conduitSpec: box.querySelector('.rs-conduit').value.trim(),
+        method: box.querySelector('.rs-method').value
+      }));
+      box.querySelector('.rs-cancel').addEventListener('click', () => close(null));
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) close(null); });
+      // モーダル内のキー入力はキャンバス側へ伝播させない（ツールショートカット誤作動防止）
+      box.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') { e.preventDefault(); box.querySelector('.rs-ok').click(); }
+        else if (e.key === 'Escape') { e.preventDefault(); close(null); }
+      });
+    });
   }
 
   _updatePreview(point) {
