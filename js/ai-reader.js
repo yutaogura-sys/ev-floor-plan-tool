@@ -88,37 +88,47 @@ class AIReader {
     let allCandidates = [];
     let anyMock = false;
 
+    const failedPages = [];
     this._showLoading('ラフ図を解析中...');
     try {
       for (let p = 1; p <= pageCount; p++) {
         if (pageCount > 1) this._updateLoading(`ラフ図を解析中... (ページ ${p}/${pageCount})`);
-        const imageBase64 = await this._renderSketchPng(p);
-        const resp = await fetch('/api/analyze-sketch', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageBase64 })
-        });
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        const analysis = await resp.json();
-        if (analysis.error) throw new Error(analysis.error);
-        if (analysis._mock) anyMock = true;
+        // ページ単位で失敗を局所化（1ページ失敗で成功分を破棄しない）
+        try {
+          const imageBase64 = await this._renderSketchPng(p);
+          const resp = await fetch('/api/analyze-sketch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageBase64 })
+          });
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          const analysis = await resp.json();
+          if (analysis.error) throw new Error(analysis.error);
+          if (analysis._mock) anyMock = true;
 
-        const origin = AIReader.pageOrigin(base, p - 1);
-        const cands = SketchToShapes.toCandidates(analysis, origin);
-        if (pageCount > 1) cands.forEach((c) => { c.page = p; });
-        allCandidates = allCandidates.concat(cands);
+          const origin = AIReader.pageOrigin(base, p - 1);
+          const cands = SketchToShapes.toCandidates(analysis, origin);
+          if (pageCount > 1) cands.forEach((c) => { c.page = p; });
+          allCandidates = allCandidates.concat(cands);
+        } catch (pageErr) {
+          console.error('AI読取エラー(ページ' + p + '):', pageErr);
+          failedPages.push(p);
+        }
       }
-    } catch (err) {
+    } finally {
       this._hideLoading();
-      console.error('AI読取エラー:', err);
-      Utils.toast('AI読取に失敗しました: ' + err.message, 'error');
-      return;
     }
-    this._hideLoading();
 
     if (allCandidates.length === 0) {
-      Utils.toast('読み取れる要素がありませんでした。', 'info');
+      if (failedPages.length) {
+        Utils.toast('AI読取に失敗しました（ページ ' + failedPages.join(',') + '）。', 'error');
+      } else {
+        Utils.toast('読み取れる要素がありませんでした。', 'info');
+      }
       return;
+    }
+    if (failedPages.length) {
+      Utils.toast(failedPages.length + 'ページの解析に失敗しました（ページ ' + failedPages.join(',') + '）。残りを配置します。', 'error');
     }
     if (anyMock) Utils.toast('モック応答です（APIキー未設定）。', 'info');
 
