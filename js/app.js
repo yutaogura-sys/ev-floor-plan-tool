@@ -520,7 +520,9 @@ class App {
 
   // 確認ダイアログ（ReviewPanel と同様のオーバーレイ）。Promise<boolean> を返す。
   _confirmExportModal({ group, missing, warn }) {
-    // 多重表示を防ぐ（出力ボタン連打時など）
+    // 多重表示を防ぐ（出力ボタン連打時など）。直前モーダルはキャンセル扱いで解決してから差し替える
+    // （DOMだけ消すと先行の Promise が宙吊りになるため）。
+    if (this._exportModalClose) this._exportModalClose(false);
     document.querySelectorAll('.export-check-overlay').forEach((e) => e.remove());
     // 現状の label/message は固定文字列だが、将来動的値が混ざっても安全なよう HTML エスケープする
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => (
@@ -548,7 +550,12 @@ class App {
       box.innerHTML = html;
       overlay.appendChild(box);
       document.body.appendChild(overlay);
-      const close = (val) => { if (overlay.parentNode) overlay.parentNode.removeChild(overlay); resolve(val); };
+      const close = (val) => {
+        this._exportModalClose = null;
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        resolve(val);
+      };
+      this._exportModalClose = close;
       box.querySelector('.ec-cancel').addEventListener('click', () => close(false));
       box.querySelector('.ec-proceed').addEventListener('click', () => close(true));
       overlay.addEventListener('click', (e) => { if (e.target === overlay) close(false); });
