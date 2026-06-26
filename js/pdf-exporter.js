@@ -84,6 +84,7 @@ class PDFExporter {
   _prepareSVGString(pxW, pxH, allowedFigures = ['plan', 'shared'], figureType = 'plan') {
     const svg = document.getElementById('drawing-canvas');
     const clone = svg.cloneNode(true);
+    clone.classList.remove('labels-hidden'); // PDF出力は画面トグルによらず詳細ラベルを常に含める
 
     // Remove interaction layer
     const il = clone.querySelector('#interaction-layer');
