@@ -34,6 +34,7 @@
       });
       dimLabel.textContent = `幅${w.toFixed(2)}m×奥行${h.toFixed(1)}m`;
       el.appendChild(dimLabel);
+      this.svgEngine.applyLabelOffset(el);
       this.svgEngine.showSelection(el);
     },
 
@@ -67,6 +68,7 @@
       });
       lbl.textContent = `充電設備基礎 ${material} ${wMm}×${hMm}×${dMm}`;
       el.appendChild(lbl);
+      this.svgEngine.applyLabelOffset(el);
     },
 
     _rebuildTextAnnotation(el, newText) {
@@ -184,6 +186,7 @@
       });
       lbl.textContent = `PB ${material} ${size}`;
       el.appendChild(lbl);
+      this.svgEngine.applyLabelOffset(el);
       this.svgEngine.showSelection(el);
     },
 
@@ -197,9 +200,16 @@
       const call = rec && StateSerializer.createCallFromRecord(rec);
       if (!call || typeof this.svgEngine[call.method] !== 'function') return;
       const figure = el.getAttribute('data-figure');
+      const labelDx = el.dataset.labelDx;
+      const labelDy = el.dataset.labelDy;
       el.remove();
       const newEl = this.svgEngine[call.method].apply(this.svgEngine, call.args);
       if (newEl && figure) newEl.setAttribute('data-figure', figure);
+      if (newEl && (parseFloat(labelDx) || parseFloat(labelDy))) {
+        newEl.dataset.labelDx = labelDx;
+        newEl.dataset.labelDy = labelDy;
+        this.svgEngine.applyLabelOffset(newEl);
+      }
       this.selected = newEl || null;
       if (newEl) {
         this.svgEngine.showSelection(newEl);

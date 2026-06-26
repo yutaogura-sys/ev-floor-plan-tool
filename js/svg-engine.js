@@ -577,6 +577,42 @@ class SVGEngine {
     return this.addToGroup('labels-group', group);
   }
 
+  // ===== 詳細ラベルの手動引き出し線（#4） =====
+  // group の主詳細ラベル(text.detail-label)を data-label-dx/dy ぶんホーム位置から
+  // ずらして配置し、ずれがあればホーム→現在地を結ぶ細線(line.leader-connector)を引く。
+  // ホーム位置はラベル要素に data-home-x/data-home-y として初回に保存（再構築時は新規要素で再捕捉）。
+  applyLabelOffset(group) {
+    if (!group) return;
+    const lbl = group.querySelector('text.detail-label');
+    if (!lbl) return;
+    if (lbl.dataset.homeX === undefined || lbl.dataset.homeY === undefined) {
+      lbl.dataset.homeX = lbl.getAttribute('x');
+      lbl.dataset.homeY = lbl.getAttribute('y');
+    }
+    const hx = parseFloat(lbl.dataset.homeX);
+    const hy = parseFloat(lbl.dataset.homeY);
+    const dx = parseFloat(group.dataset.labelDx || 0) || 0;
+    const dy = parseFloat(group.dataset.labelDy || 0) || 0;
+    lbl.setAttribute('x', hx + dx);
+    lbl.setAttribute('y', hy + dy);
+    let conn = group.querySelector('line.leader-connector');
+    if (dx === 0 && dy === 0) {
+      if (conn) conn.remove();
+      return;
+    }
+    if (!conn) {
+      conn = Utils.createSVGElement('line', {
+        class: 'leader-connector detail-label',
+        stroke: '#888', 'stroke-width': this.S.strokeThin
+      });
+      group.insertBefore(conn, group.firstChild);
+    }
+    conn.setAttribute('x1', hx);
+    conn.setAttribute('y1', hy);
+    conn.setAttribute('x2', hx + dx);
+    conn.setAttribute('y2', hy + dy);
+  }
+
   // ===== Dimension Line =====
   createDimension(id, x1, y1, x2, y2, labelOverride, dimColor = '#0066cc') {
     const S = this.S;
