@@ -104,12 +104,18 @@ class SelectTool {
   }
 
   onMouseUp(point, e) {
+    const wasManipulating = this.isDragging || this.isScaling || this.isRotating;
     this.isDragging = false;
     this.isScaling = false;
     this.isRotating = false;
     if (this.selected) {
       this.svgEngine.showSelection(this.selected);
       this._showProperties(this.selected);
+    }
+    // Record move/scale/rotate so it is independently undoable.
+    // updateChecklist's dedup guard skips this when nothing actually changed (e.g. a plain click-select).
+    if (wasManipulating && typeof app !== 'undefined' && app.updateChecklist) {
+      app.updateChecklist();
     }
   }
 

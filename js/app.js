@@ -489,6 +489,8 @@ class App {
     document.addEventListener('keydown', (e) => {
       const ctrl = e.ctrlKey || e.metaKey;
       if (!ctrl) return;
+      // フォーム入力中はブラウザ標準のテキストUndoを優先する
+      if (e.target && e.target.matches && e.target.matches('input, textarea, select')) return;
       const key = e.key.toLowerCase();
       if (key === 'z' && !e.shiftKey) { e.preventDefault(); this.doUndo(); }
       else if (key === 'y' || (key === 'z' && e.shiftKey)) { e.preventDefault(); this.doRedo(); }
@@ -620,6 +622,9 @@ class App {
       this.updateChecklist();
       this.history.reset(StateSerializer.snapshot(this.svgEngine));
       this._updateHistoryButtons();
+    } else {
+      // 復元を断ったら古い自動保存を消し、次回起動時に再度尋ねないようにする
+      try { localStorage.removeItem('ev-floorplan-autosave'); } catch (e) { /* ignore */ }
     }
   }
 }
