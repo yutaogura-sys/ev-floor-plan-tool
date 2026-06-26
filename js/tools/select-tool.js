@@ -513,9 +513,33 @@ class SelectTool {
           ${this._colorPickerHtml('color', textColor)}`;
         break;
       }
-      case 'road-marking':
-        html += `<p>路面表示 900×900</p>`;
+      case 'road-marking': {
+        const surf = element.dataset.surfaceType || 'アスファルト';
+        const surfOpts = ['アスファルト', 'コンクリート', 'インターロッキング', '透水性舗装', 'その他'];
+        html += `<p>路面表示 900×900</p>
+          <div class="form-group"><label>路面状況</label>
+            <select data-prop="surfaceType" class="prop-input" style="width:100%;padding:4px;background:#2a2a2a;color:#ddd;border:1px solid #555;border-radius:3px;">
+              ${surfOpts.map(o => `<option value="${o}" ${o === surf ? 'selected' : ''}>${o}</option>`).join('')}
+            </select>
+          </div>`;
         break;
+      }
+      case 'wheel-stop':
+        html += `
+          <div class="form-group"><label>回転角度 (°)</label><input type="number" step="1" value="${Math.round(parseFloat(element.dataset.rotation || 0))}" data-prop="rotation" class="prop-input"></div>`;
+        break;
+      case 'handhole': {
+        const hw = Math.round(parseFloat(element.dataset.hhW || 0.4) * 1000);
+        const hd = Math.round(parseFloat(element.dataset.hhD || 0.4) * 1000);
+        const hh = Math.round(parseFloat(element.dataset.hhH || 0.4) * 1000);
+        const hmat = element.dataset.material || 'コンクリート';
+        html += `
+          <div class="form-group"><label>幅 W (mm)</label><input type="number" value="${hw}" data-prop="hhW" class="prop-input"></div>
+          <div class="form-group"><label>奥行 D (mm)</label><input type="number" value="${hd}" data-prop="hhD" class="prop-input"></div>
+          <div class="form-group"><label>深さ H (mm)</label><input type="number" value="${hh}" data-prop="hhH" class="prop-input"></div>
+          <div class="form-group"><label>材質</label><input type="text" value="${hmat}" data-prop="material" class="prop-input"></div>`;
+        break;
+      }
       case 'dimension': {
         const dist = element.dataset.distance;
         const dimColor = element.dataset.color || Utils.COLORS.blue;
@@ -710,8 +734,9 @@ class SelectTool {
     }
 
     // 寸法系プロパティの不正値（非数値・0以下・無限大）は破棄してジオメトリ破損を防ぐ
-    if ((prop === 'width' || prop === 'height' || prop === 'depth') &&
-        (type === 'charging-space' || type === 'foundation' || type === 'boundary-rect')) {
+    if (((prop === 'width' || prop === 'height' || prop === 'depth') &&
+        (type === 'charging-space' || type === 'foundation' || type === 'boundary-rect')) ||
+        ((prop === 'hhW' || prop === 'hhD' || prop === 'hhH') && type === 'handhole')) {
       const mm = parseFloat(value);
       if (!isFinite(mm) || mm <= 0) {
         if (typeof Utils !== 'undefined' && Utils.toast) Utils.toast('寸法は正の数値（mm）で入力してください。', 'error');
@@ -803,6 +828,17 @@ class SelectTool {
       if (prop === 'width') this.selected.dataset.width = parseFloat(value) / 1000;
       else if (prop === 'height') this.selected.dataset.height = parseFloat(value) / 1000;
       else if (prop === 'depth') this.selected.dataset.depth = parseFloat(value) / 1000;
+      this._regenerateSelected();
+    }
+
+    // ハンドホールの寸法(mm→m)・材質の編集を反映
+    if (type === 'handhole' && (prop === 'hhW' || prop === 'hhD' || prop === 'hhH' || prop === 'material')) {
+      if (prop === 'hhW' || prop === 'hhD' || prop === 'hhH') this.selected.dataset[prop] = parseFloat(value) / 1000;
+      this._regenerateSelected();
+    }
+
+    // 路面表示の路面状況の編集を反映
+    if (type === 'road-marking' && prop === 'surfaceType') {
       this._regenerateSelected();
     }
 
