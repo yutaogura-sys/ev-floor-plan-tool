@@ -701,6 +701,16 @@ class SelectTool {
       return;
     }
 
+    // 寸法系プロパティの不正値（非数値・0以下・無限大）は破棄してジオメトリ破損を防ぐ
+    if ((prop === 'width' || prop === 'height' || prop === 'depth') &&
+        (type === 'charging-space' || type === 'foundation' || type === 'boundary-rect')) {
+      const mm = parseFloat(value);
+      if (!isFinite(mm) || mm <= 0) {
+        if (typeof Utils !== 'undefined' && Utils.toast) Utils.toast('寸法は正の数値（mm）で入力してください。', 'error');
+        return;
+      }
+    }
+
     this.selected.dataset[prop] = value;
 
     if (type === 'pdf-overlay') {
