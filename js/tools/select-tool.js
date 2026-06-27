@@ -253,11 +253,13 @@ class SelectTool {
     }
 
     const wasManipulating = this.isDragging || this.isScaling || this.isRotating || this.isLabelDragging;
+    const wasScalingRotating = this.isScaling || this.isRotating;
     this.isDragging = false;
     this.isScaling = false;
     this.isRotating = false;
     this.isLabelDragging = false;
     this.dragStartPositions = null;
+    if (wasScalingRotating) this._restoreHint(); // ライブ数値表示を基本ヒントへ戻す
     if (this.selection.length) {
       this._refreshSelectionVisual();
       this._refreshPropsForSelection();
@@ -460,6 +462,7 @@ class SelectTool {
     this.selected.dataset.scale = newScale.toFixed(3);
     this._updatePdfOverlayTransform();
     this.svgEngine.showSelection(this.selected);
+    if (Utils.setStatusHint) Utils.setStatusHint(`拡大率: ×${newScale.toFixed(2)}`);
   }
 
   // ========== Rotate ==========
@@ -491,9 +494,11 @@ class SelectTool {
 
     // Snap to 0/90/180/270 within 3 degrees
     const snapAngles = [0, 90, -90, 180, -180, 45, -45, 135, -135];
+    let snapped = false;
     for (const sa of snapAngles) {
       if (Math.abs(newRotation - sa) < 3) {
         newRotation = sa;
+        snapped = true;
         break;
       }
     }
@@ -501,6 +506,7 @@ class SelectTool {
     this.selected.dataset.rotation = newRotation.toFixed(1);
     this._updatePdfOverlayTransform();
     this.svgEngine.showSelection(this.selected);
+    if (Utils.setStatusHint) Utils.setStatusHint(`回転: ${newRotation.toFixed(1)}°${snapped ? '（スナップ）' : ''}`);
   }
 
   // ========== Transform ==========
@@ -1053,40 +1059,57 @@ class SelectTool {
     }
   }
 
-  // 同型複数選択の一括編集パネル
+  // 要素のフィールド値を文字列で取得（混在判定用に正規化）
+  _bulkFieldValue(el, prop) {
+    if (prop === 'rotation') return String(parseFloat(el.dataset.rotation || 0) || 0);
+    if (prop === 'color') return el.dataset.color || '';
+    return el.dataset[prop] != null ? String(el.dataset[prop]) : '';
+  }
+
+  // 同型複数選択の一括編集パネル。選択内で値がバラつく項目は「（複数値）」を表示し、
+  // 触れていない項目を誤って全件上書きしないようにする（Nielsen 原則1）。
   _showBulkProperties(type) {
     const panel = document.getElementById('properties-content');
     if (!panel) return;
     const fields = this._bulkFieldsFor(type);
     const n = this.selection.length;
-    const first = this.selection[0];
     const fieldHtml = fields.map(f => {
-      const cur = (f.prop === 'rotation') ? (parseFloat(first.dataset.rotation || 0) || 0)
-        : (first.dataset[f.prop] != null ? first.dataset[f.prop] : '');
+      const vals = this.selection.map(el => this._bulkFieldValue(el, f.prop));
+      const mixed = vals.some(v => v !== vals[0]);
+      const cur = mixed ? '' : vals[0];
+      const note = mixed ? ' <span style="color:#e0a000;font-size:11px;">（複数値）</span>' : '';
       if (f.kind === 'select') {
-        return `<div class="form-group"><label>${f.label}</label>
+        const placeholder = mixed ? '<option value="" selected disabled>（複数値）</option>' : '';
+        return `<div class="form-group"><label>${f.label}${note}</label>
           <select data-bulk-prop="${f.prop}" class="prop-input" style="width:100%;padding:4px;background:#2a2a2a;color:#ddd;border:1px solid #555;border-radius:3px;">
-            ${f.options.map(o => `<option value="${o}" ${o === cur ? 'selected' : ''}>${o}</option>`).join('')}
+            ${placeholder}
+            ${f.options.map(o => `<option value="${o}" ${(!mixed && o === cur) ? 'selected' : ''}>${o}</option>`).join('')}
           </select></div>`;
       }
       if (f.kind === 'color') {
-        return this._colorPickerHtml('color', cur || Utils.COLORS.blue).replace(/data-prop="color"/g, 'data-bulk-prop="color"');
+        // 色は値が無効にできないため、混在時はラベルで明示しプリセット強調は外す
+        const base = this._colorPickerHtml('color', mixed ? '' : (cur || Utils.COLORS.blue))
+          .replace(/data-prop="color"/g, 'data-bulk-prop="color"');
+        return mixed ? base.replace('<label>色</label>', '<label>色（複数値）</label>') : base;
       }
       const inputType = f.kind === 'number' ? 'number' : 'text';
       const step = f.step ? `step="${f.step}"` : '';
-      return `<div class="form-group"><label>${f.label}</label><input type="${inputType}" ${step} value="${cur}" data-bulk-prop="${f.prop}" class="prop-input"></div>`;
+      const ph = mixed ? 'placeholder="（複数値）"' : '';
+      return `<div class="form-group"><label>${f.label}${note}</label><input type="${inputType}" ${step} value="${cur}" ${ph} data-bulk-prop="${f.prop}" class="prop-input"></div>`;
     }).join('');
 
     panel.innerHTML =
       `<p style="font-weight:600;margin-bottom:6px;">${this._getTypeName(type)} を ${n}個 選択中</p>` +
-      `<p style="font-size:11px;color:#888;margin:0 0 10px;">下の項目は選択全体にまとめて適用されます。</p>` +
+      `<p style="font-size:11px;color:#888;margin:0 0 10px;">下の項目は選択全体にまとめて適用されます（「（複数値）」は変更した項目のみ反映）。</p>` +
       fieldHtml +
       `<button style="width:100%;margin-top:8px;padding:6px 8px;background:#f44;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;" onclick="app.toolManager.tools.select.deleteSelected()">🗑 ${n}個を削除</button>`;
 
-    // 入力変更を全選択へ一括適用
+    // 入力変更を全選択へ一括適用（空＝「（複数値）」のまま未変更 はスキップして誤上書きを防ぐ）
     panel.querySelectorAll('[data-bulk-prop]').forEach(input => {
-      const ev = (input.tagName === 'SELECT') ? 'change' : 'change';
-      input.addEventListener(ev, () => this._applyBulkProp(input.dataset.bulkProp, input.value));
+      input.addEventListener('change', () => {
+        if (input.value === '') return;
+        this._applyBulkProp(input.dataset.bulkProp, input.value);
+      });
     });
     // カラープリセットボタン（_colorPickerHtml 由来）
     panel.querySelectorAll('.color-preset-btn').forEach(btn => {
