@@ -294,6 +294,11 @@ class App {
 
     this._offerRestore();
 
+    // 初回のみワークフロー案内を表示（復元ダイアログが出ている再来訪時は出さない）
+    if (typeof Onboarding !== 'undefined' && !document.querySelector('.restore-overlay')) {
+      Onboarding.maybeShowFirstRun();
+    }
+
     console.log('EV充電設備 平面図作成ツール initialized');
   }
 

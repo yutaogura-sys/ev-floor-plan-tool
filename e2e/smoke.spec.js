@@ -4,7 +4,8 @@ const { test, expect } = require('@playwright/test');
 
 // 各テスト前に localStorage を空にして起動（自動保存復元ダイアログを出さない）
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => { try { localStorage.clear(); } catch (e) {} });
+  // localStorage を空にしつつ、初回オンボーディングは抑止（個別テストで明示的に検証する）
+  await page.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('ev-floorplan-onboarded', '1'); } catch (e) {} });
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   page.on('pageerror', (e) => errors.push(String(e)));
@@ -185,6 +186,27 @@ test('一括編集: 混在値は（複数値）表示で、他項目変更時に
   expect(r.mixedShown).toBe(true);       // 混在回転は（複数値）
   expect(r.allWall).toBe(true);          // 共有項目は一括反映
   expect(r.rots).toEqual([0, 90]);       // 触れていない回転は上書きされない
+});
+
+test('初回オンボーディング: 表示→閉じると再表示しない（新UX）', async ({ page }) => {
+  const r = await page.evaluate(() => {
+    localStorage.removeItem('ev-floorplan-onboarded');
+    Onboarding.maybeShowFirstRun();
+    const shown = !!document.querySelector('.onboarding-overlay');
+    const hasSteps = shown && /部材を配置|要件を確認/.test(document.querySelector('.onboarding-overlay').textContent);
+    document.querySelector('.onboarding-overlay .ob-start').click();
+    const flag = localStorage.getItem('ev-floorplan-onboarded');
+    const closed = !document.querySelector('.onboarding-overlay');
+    Onboarding.maybeShowFirstRun(); // 2回目は出ない
+    const noReshow = !document.querySelector('.onboarding-overlay');
+    return { shown, hasSteps, flag, closed, noReshow };
+  });
+  expect(r.shown).toBe(true);
+  expect(r.hasSteps).toBe(true);
+  expect(r.closed).toBe(true);
+  expect(r.flag).toBe('1');
+  expect(r.noReshow).toBe(true);
+  expect(page._errors, 'console errors: ' + page._errors.join(' | ')).toHaveLength(0);
 });
 
 test('狭幅でヘッダー右ボタンが見切れない（#8）', async ({ page }) => {

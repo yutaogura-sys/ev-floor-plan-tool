@@ -7,7 +7,7 @@
 const { test, expect } = require('@playwright/test');
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => { try { localStorage.clear(); } catch (e) {} });
+  await page.addInitScript(() => { try { localStorage.clear(); localStorage.setItem('ev-floorplan-onboarded', '1'); } catch (e) {} });
   await page.setViewportSize({ width: 1280, height: 900 });
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
