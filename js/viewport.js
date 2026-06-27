@@ -28,7 +28,11 @@ class Viewport {
     // Zoom buttons
     document.getElementById('btn-zoom-in').addEventListener('click', () => this.zoomBy(1.3));
     document.getElementById('btn-zoom-out').addEventListener('click', () => this.zoomBy(0.7));
-    document.getElementById('btn-zoom-fit').addEventListener('click', () => this.fitToExtents());
+    document.getElementById('btn-zoom-fit').addEventListener('click', () => {
+      // 選択があれば選択範囲へ、無ければ全体へフィット
+      const sb = (typeof app !== 'undefined' && app.getSelectionBoundsDxf) ? app.getSelectionBoundsDxf() : null;
+      this.fitToExtents(sb || undefined);
+    });
   }
 
   _onWheel(e) {

@@ -777,6 +777,24 @@ class App {
     if (redoBtn) redoBtn.disabled = !this.history.canRedo();
   }
 
+  // 選択集合の DXF 座標 union bbox を返す（選択へズーム用）。select ツールで選択がある時のみ。
+  // _elBBoxInLayer は描画(SVG)座標を返すため dxfY = -svgY で変換する。
+  getSelectionBoundsDxf() {
+    const sel = this.toolManager.tools.select;
+    if (!sel || this.toolManager.activeTool !== 'select' || !sel.selection || !sel.selection.length) return null;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    sel.selection.forEach(el => {
+      const bb = sel._elBBoxInLayer(el);
+      if (!isFinite(bb.minX)) return;
+      if (bb.minX < minX) minX = bb.minX;
+      if (bb.minY < minY) minY = bb.minY;
+      if (bb.maxX > maxX) maxX = bb.maxX;
+      if (bb.maxY > maxY) maxY = bb.maxY;
+    });
+    if (!isFinite(minX)) return null;
+    return { minX, maxX, minY: -maxY, maxY: -minY }; // SVG → DXF（y反転）
+  }
+
   // ===== コピー & ペースト（アプリ内クリップボード） =====
   copySelection() {
     const sel = this.toolManager.tools.select;
