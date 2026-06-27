@@ -61,7 +61,8 @@ const HelpOverlay = {
     let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
       '<h2 style="margin:0;font-size:18px;">キーボード / 操作ショートカット</h2>' +
       '<button class="help-close" aria-label="閉じる" style="border:none;background:#eee;border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:16px;">✕</button></div>';
-    html += '<p style="margin:0 0 14px;font-size:12px;color:#666;">入力欄にフォーカスが無いときに有効。Esc で閉じます。</p>';
+    html += '<p style="margin:0 0 12px;font-size:12px;color:#666;">入力欄にフォーカスが無いときに有効。Esc で閉じます。' +
+      '<button class="help-onboarding" style="background:none;border:none;color:#1a6ed8;cursor:pointer;font-size:12px;padding:0 0 0 6px;text-decoration:underline;">📖 使い方ガイドを開く</button></p>';
 
     this.GROUPS.forEach(g => {
       html += `<h3 style="font-size:13px;margin:14px 0 6px;border-bottom:1px solid #ddd;padding-bottom:4px;">${g.title}</h3>`;
@@ -87,6 +88,8 @@ const HelpOverlay = {
     overlay.addEventListener('keydown', onKey);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) this.close(); });
     box.querySelector('.help-close').addEventListener('click', () => this.close());
+    const obBtn = box.querySelector('.help-onboarding');
+    if (obBtn) obBtn.addEventListener('click', () => { this.close(); if (typeof Onboarding !== 'undefined') Onboarding.show(); });
     // フォーカスを移してキーで閉じられるように
     box.querySelector('.help-close').focus();
   },
