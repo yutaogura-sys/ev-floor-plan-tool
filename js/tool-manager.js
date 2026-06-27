@@ -232,6 +232,14 @@ class ToolManager {
         e.preventDefault();
       }
 
+      // Ctrl+C / Ctrl+V コピー&ペースト（選択集合をアプリ内クリップボードで複写）
+      if ((e.key === 'c' || e.key === 'C') && (e.ctrlKey || e.metaKey)) {
+        if (typeof app !== 'undefined' && app.copySelection) { app.copySelection(); e.preventDefault(); }
+      }
+      if ((e.key === 'v' || e.key === 'V') && (e.ctrlKey || e.metaKey)) {
+        if (typeof app !== 'undefined' && app.pasteClipboard) { app.pasteClipboard(); e.preventDefault(); }
+      }
+
       // Undo/Redo は app.js の keydown（doUndo/doRedo、入力欄ガード付き）が担う
     });
   }

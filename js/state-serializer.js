@@ -221,6 +221,33 @@ const StateSerializer = {
     return { method: def.method, args };
   },
 
+  // レコード配列を (dx,dy) 平行移動した「新しい配列」を返す純関数（コピー&ペーストの貼付位置算出）。
+  // 平行移動対象: x/textX/x2 に +dx、y/textY/y2 に +dy、wiring-route の各頂点、wiring-summary の x/y。
+  // id は変更しない（呼び出し側で新規 id を割り当てる）。元レコードは変更しない（ディープコピー）。
+  offsetRecords(records, dx, dy) {
+    if (!Array.isArray(records)) return [];
+    const XK = ['x', 'textX', 'x2'];
+    const YK = ['y', 'textY', 'y2'];
+    return records.map(rec => {
+      if (!rec || typeof rec !== 'object') return rec;
+      const r = JSON.parse(JSON.stringify(rec));
+      XK.forEach(k => { if (typeof r[k] === 'number' && isFinite(r[k])) r[k] += dx; });
+      YK.forEach(k => { if (typeof r[k] === 'number' && isFinite(r[k])) r[k] += dy; });
+      if (r.routeData && Array.isArray(r.routeData.vertices)) {
+        r.routeData.vertices = r.routeData.vertices.map(v => {
+          if (v && typeof v === 'object') {
+            const nv = Object.assign({}, v);
+            if (typeof nv.x === 'number') nv.x += dx;
+            if (typeof nv.y === 'number') nv.y += dy;
+            return nv;
+          }
+          return v;
+        });
+      }
+      return r;
+    });
+  },
+
   serializeAnnotations(svgEngine) {
     const out = [];
     const nodes = svgEngine.getAnnotations();
