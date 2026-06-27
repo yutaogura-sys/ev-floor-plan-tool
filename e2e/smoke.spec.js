@@ -122,6 +122,45 @@ test('矢印nudge と コピー&ペースト（新機能）', async ({ page }) =
   expect(page._errors, 'console errors: ' + page._errors.join(' | ')).toHaveLength(0);
 });
 
+test('ヘルプ: ? でショートカット一覧が開閉する（発見性）', async ({ page }) => {
+  await page.locator('#drawing-canvas').click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press('Shift+Slash'); // = ?
+  const overlay = page.locator('.help-overlay');
+  await expect(overlay).toBeVisible();
+  await expect(overlay).toContainText('ツール切替');
+  await expect(overlay).toContainText('Ctrl+C');
+  await page.keyboard.press('Escape');
+  await expect(overlay).toHaveCount(0);
+});
+
+test('削除フィードバックと配線ルートのEsc継続（新UX）', async ({ page }) => {
+  // 削除トースト
+  await page.evaluate(() => {
+    const sel = app.toolManager.tools.select;
+    app.toolManager.setActiveTool('select');
+    app.svgEngine.getAnnotations().forEach((e) => e.remove());
+    sel._setSelection([
+      app.svgEngine.createCharger('e_d1', 1, 1, 0, '', 'パイルスタンド'),
+      app.svgEngine.createCharger('e_d2', 3, 1, 0, '', 'パイルスタンド')
+    ]);
+    sel.deleteSelected();
+  });
+  await expect(page.locator('body')).toContainText('2個を削除しました');
+  // 配線ルート作図中の Esc はツールに留まる
+  const stays = await page.evaluate(() => {
+    const tm = app.toolManager;
+    tm.setActiveTool('wiring-route');
+    const rt = tm.tools['wiring-route'];
+    rt.onMouseDown({ x: 1, y: 1 }, { button: 0 });
+    rt.onMouseDown({ x: 2, y: 2 }, { button: 0 });
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    return { tool: tm.activeTool, verts: rt.vertices.length };
+  });
+  expect(stays.tool).toBe('wiring-route'); // 選択ツールへ戻らない
+  expect(stays.verts).toBe(0);             // 作図は取消
+  expect(page._errors, 'console errors: ' + page._errors.join(' | ')).toHaveLength(0);
+});
+
 test('狭幅でヘッダー右ボタンが見切れない（#8）', async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 900 });
   const clipped = await page.evaluate(() => {

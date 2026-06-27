@@ -53,10 +53,15 @@ class WiringRouteTool {
     if (this._finishing) return;
     if (e.key === 'Enter' && this.vertices.length >= 2) {
       this._finishRoute();
+      if (e.preventDefault) e.preventDefault();
     } else if (e.key === 'Escape') {
-      this._removePreview();
-      this.vertices = [];
-      this.isDrawing = false;
+      // 作図中なら取消してツールに留まる（tool-manager の選択ツール復帰を抑止）
+      if (this.isDrawing || this.vertices.length) {
+        this._removePreview();
+        this.vertices = [];
+        this.isDrawing = false;
+        if (e.preventDefault) e.preventDefault();
+      }
     }
   }
 

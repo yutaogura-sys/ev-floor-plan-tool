@@ -216,11 +216,14 @@ class Viewport {
   }
 
   _updateZoomDisplay() {
-    if (!this.bounds) return;
-    const vb = this.getViewBox();
-    const totalWidth = this.bounds.maxX - this.bounds.minX;
-    const zoomPercent = Math.round((totalWidth / vb.width) * 100);
     const zoomEl = document.getElementById('zoom-level');
-    if (zoomEl) zoomEl.textContent = `${zoomPercent}%`;
+    if (!zoomEl) return;
+    // DXF範囲が無ければ注釈範囲を基準にする（注釈のみの作図でもズーム率を更新）
+    let ref = this.bounds;
+    if (!ref || !isFinite(ref.minX)) ref = this._annotationBounds();
+    const vb = this.getViewBox();
+    const totalWidth = ref ? (ref.maxX - ref.minX) : NaN;
+    if (!(totalWidth > 0) || !(vb.width > 0)) { zoomEl.textContent = '—'; return; }
+    zoomEl.textContent = `${Math.round((totalWidth / vb.width) * 100)}%`;
   }
 }
