@@ -209,6 +209,26 @@ test('初回オンボーディング: 表示→閉じると再表示しない（
   expect(page._errors, 'console errors: ' + page._errors.join(' | ')).toHaveLength(0);
 });
 
+test('要件チェック: 「未充足のみ表示」で充足/非該当を隠す（新UX）', async ({ page }) => {
+  await page.evaluate(() => {
+    app.svgEngine.getAnnotations().forEach((e) => e.remove());
+    app.svgEngine.createChargingSpace('uf1', 0, 0, 2.5, 5, '①');
+    app.updateChecklist();
+  });
+  const planUl = page.locator('#checklist-plan');
+  await page.check('#checklist-filter-unmet');
+  // 充足(satisfied)・非該当(req-na)は非表示、未充足は表示
+  const satisfiedVisible = await planUl.locator('li.satisfied:visible').count();
+  const naVisible = await planUl.locator('li.req-na:visible').count();
+  const unmetVisible = await planUl.locator('li:not(.satisfied):not(.req-na):visible').count();
+  expect(satisfiedVisible).toBe(0);
+  expect(naVisible).toBe(0);
+  expect(unmetVisible).toBeGreaterThan(0);
+  // 解除で全項目が戻る
+  await page.uncheck('#checklist-filter-unmet');
+  expect(await planUl.locator('li:visible').count()).toBe(12);
+});
+
 test('狭幅でヘッダー右ボタンが見切れない（#8）', async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 900 });
   const clipped = await page.evaluate(() => {
