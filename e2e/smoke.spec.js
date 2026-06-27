@@ -161,6 +161,32 @@ test('削除フィードバックと配線ルートのEsc継続（新UX）', asy
   expect(page._errors, 'console errors: ' + page._errors.join(' | ')).toHaveLength(0);
 });
 
+test('一括編集: 混在値は（複数値）表示で、他項目変更時に誤上書きしない（新UX）', async ({ page }) => {
+  const r = await page.evaluate(() => {
+    const sel = app.toolManager.tools.select;
+    app.toolManager.setActiveTool('select');
+    app.svgEngine.getAnnotations().forEach((e) => e.remove());
+    // 回転が異なる（0 / 90）、スタンド種別は同じ2台
+    const c1 = app.svgEngine.createCharger('mx1', 1, 1, 0, 'A', 'パイルスタンド');
+    const c2 = app.svgEngine.createCharger('mx2', 3, 1, 90, 'B', 'パイルスタンド');
+    sel._setSelection([c1, c2]);
+    const panel = document.getElementById('properties-content');
+    const rotInput = panel.querySelector('[data-bulk-prop="rotation"]');
+    const mixedShown = rotInput.value === '' && rotInput.placeholder === '（複数値）';
+    // 共有項目（スタンド種別）を一括変更 → 回転は各自のまま維持されるべき
+    sel._applyBulkProp('standType', '壁付');
+    const list = [...app.svgEngine.getAnnotations()].filter((e) => e.dataset.type === 'charger');
+    const allWall = list.every((e) => e.dataset.standType === '壁付');
+    const rots = list.map((e) => +e.dataset.rotation).sort((a, b) => a - b);
+    app.svgEngine.getAnnotations().forEach((e) => e.remove());
+    sel._clearSelection();
+    return { mixedShown, allWall, rots };
+  });
+  expect(r.mixedShown).toBe(true);       // 混在回転は（複数値）
+  expect(r.allWall).toBe(true);          // 共有項目は一括反映
+  expect(r.rots).toEqual([0, 90]);       // 触れていない回転は上書きされない
+});
+
 test('狭幅でヘッダー右ボタンが見切れない（#8）', async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 900 });
   const clipped = await page.evaluate(() => {
