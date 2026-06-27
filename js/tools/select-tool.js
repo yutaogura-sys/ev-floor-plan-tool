@@ -154,32 +154,58 @@ class SelectTool {
     this.selection.forEach(el => {
       const start = this.dragStartPositions.get(el);
       if (!start) return;
-      this._moveElementTo(el, start.x + appliedDx, start.y + appliedDy, start);
+      this._moveElementTo(el, start.x + appliedDx, start.y + appliedDy);
     });
 
     this._refreshSelectionVisual();
   }
 
-  // 1要素を (newX,newY) へ移動（型別の transform/data 更新）。一括移動・nudge から共用。
-  // start: ドラッグ開始時の {x,y}（絶対位置型の translate 量算出に使用）。
-  _moveElementTo(el, newX, newY, start) {
+  // 1要素を (newX,newY) へ移動（型別の transform/data 更新）。一括移動・nudge・単一ドラッグから共用。
+  _moveElementTo(el, newX, newY) {
     const type = el.dataset.type;
     if (type === 'pdf-overlay') {
       el.dataset.x = newX;
       el.dataset.y = newY;
       if (el === this.selected) this._updatePdfOverlayTransform();
-    } else if (type === 'charger' || type === 'wheel-stop' || type === 'charging-space') {
-      // translate(x,y) rotate(r)：充電器/車止め/充電スペースはローカル座標の子を持つ
+    } else if (type === 'charger' || type === 'wheel-stop' ||
+               type === 'charging-space' || type === 'existing-charger') {
+      // ローカル座標の子＋ translate(x,y) rotate(r)：絶対位置で再配置し回転を保持
       const rotation = el.dataset.rotation || 0;
       el.setAttribute('transform', `translate(${newX},${newY}) rotate(${rotation})`);
       el.dataset.x = newX;
       el.dataset.y = newY;
     } else {
-      // 絶対座標の子を持つ要素は開始位置からの平行移動量で translate
-      el.setAttribute('transform', `translate(${newX - start.x},${newY - start.y})`);
+      // 絶対座標の子を持つ要素：既存 translate を起点に増分を加算（繰り返し移動でも累積する）
+      const cur = this._parseTranslate(el.getAttribute('transform'));
+      const curX = parseFloat(el.dataset.x || 0) || 0;
+      const curY = parseFloat(el.dataset.y || 0) || 0;
+      const tx = cur.x + (newX - curX);
+      const ty = cur.y + (newY - curY);
+      el.setAttribute('transform', `translate(${tx},${ty})`);
       el.dataset.x = newX;
       el.dataset.y = newY;
     }
+  }
+
+  // transform 文字列から translate 成分を取り出す（無ければ 0,0）
+  _parseTranslate(transform) {
+    if (!transform) return { x: 0, y: 0 };
+    const m = /translate\(\s*(-?[\d.]+)[ ,]+(-?[\d.]+)\s*\)/.exec(transform) ||
+              /translate\(\s*(-?[\d.]+)\s*\)/.exec(transform);
+    if (!m) return { x: 0, y: 0 };
+    return { x: parseFloat(m[1]) || 0, y: parseFloat(m[2]) || 0 };
+  }
+
+  // 選択要素を (dx,dy) ぶん相対移動（矢印キー nudge）。grid 単位の微調整に使用。
+  nudge(dx, dy) {
+    if (!this.selection.length || (!dx && !dy)) return;
+    this.selection.forEach(el => {
+      const sx = parseFloat(el.dataset.x || 0) || 0;
+      const sy = parseFloat(el.dataset.y || 0) || 0;
+      this._moveElementTo(el, sx + dx, sy + dy);
+    });
+    this._refreshSelectionVisual();
+    if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
   }
 
   onMouseUp(point, e) {
