@@ -259,17 +259,41 @@ class App {
     const aiBtn = document.getElementById('btn-ai-read');
     if (aiBtn) aiBtn.addEventListener('click', () => this.aiReader.run());
 
-    // Panel collapse toggling
+    // Panel collapse toggling（折りたたみ状態を localStorage に保存して次回も維持）
+    const COLLAPSE_KEY = 'ev-floorplan-collapsed';
+    let collapsedState = {};
+    try { collapsedState = JSON.parse(localStorage.getItem(COLLAPSE_KEY) || '{}') || {}; } catch (e) { collapsedState = {}; }
     document.querySelectorAll('.panel-title').forEach(title => {
+      const contentId = title.dataset.collapse;
+      const content = document.getElementById(contentId);
+      if (content && collapsedState[contentId]) { // 復元
+        content.classList.add('collapsed');
+        title.classList.add('collapsed');
+      }
       title.addEventListener('click', () => {
-        const contentId = title.dataset.collapse;
-        const content = document.getElementById(contentId);
-        if (content) {
-          content.classList.toggle('collapsed');
-          title.classList.toggle('collapsed');
-        }
+        if (!content) return;
+        const isCollapsed = content.classList.toggle('collapsed');
+        title.classList.toggle('collapsed', isCollapsed);
+        collapsedState[contentId] = isCollapsed;
+        try { localStorage.setItem(COLLAPSE_KEY, JSON.stringify(collapsedState)); } catch (e) { /* 容量超過は無視 */ }
       });
     });
+
+    // 補助金要件チェックの「未充足のみ表示」フィルタ（19項目の情報過多を緩和）
+    const filterCb = document.getElementById('checklist-filter-unmet');
+    if (filterCb) {
+      const FKEY = 'ev-floorplan-checklist-unmet';
+      try { filterCb.checked = localStorage.getItem(FKEY) === '1'; } catch (e) { /* noop */ }
+      const applyFilter = () => {
+        const c = document.getElementById('checklist-content');
+        if (c) c.classList.toggle('filter-unmet', filterCb.checked);
+      };
+      applyFilter();
+      filterCb.addEventListener('change', () => {
+        applyFilter();
+        try { localStorage.setItem(FKEY, filterCb.checked ? '1' : '0'); } catch (e) { /* noop */ }
+      });
+    }
 
     // Set default viewbox
     this.svgElement.setAttribute('viewBox', '-100 -100 200 200');
@@ -484,6 +508,7 @@ class App {
       if (icon) icon.textContent = ICONS[res.status] || '○';
       li.classList.toggle('satisfied', res.status === 'ok');
       li.classList.toggle('req-warn', res.status === 'warn');
+      li.classList.toggle('req-na', res.status === 'na'); // 「未充足のみ表示」フィルタ用
       // メッセージ（warn/missing のみ）
       li.title = res.message || '';
       let msgEl = li.querySelector('.req-msg');

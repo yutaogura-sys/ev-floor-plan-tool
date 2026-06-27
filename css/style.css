@@ -104,6 +104,9 @@ body { display: flex; flex-direction: column; }
 .panel-title.collapsed::after { transform: rotate(-90deg); }
 .panel-content { padding: 8px 12px; }
 .panel-content.collapsed { display: none; }
+/* 「未充足のみ表示」フィルタ: 充足(ok)・非該当(na)の項目を隠す */
+#checklist-content.filter-unmet li.satisfied,
+#checklist-content.filter-unmet li.req-na { display: none; }
 .placeholder-text { color: #999; font-size: 11px; font-style: italic; }
 
 .form-group { margin-bottom: 8px; }
