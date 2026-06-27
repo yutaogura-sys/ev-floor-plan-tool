@@ -63,15 +63,14 @@
       });
     },
 
-    // 選択要素を現在の data-* から作り直す（描画ロジックを二重化せず StateSerializer を再利用）。
-    // change(blur)時に呼ぶ前提。data-figure と id を保持し、新要素を選択し直す。
-    _regenerateSelected() {
-      const el = this.selected;
-      if (!el) return;
+    // 1要素を現在の data-* から作り直して返す（選択は変更しない）。id/figure/ラベルオフセットを保持。
+    // 描画ロジックを二重化せず StateSerializer を再利用する。
+    _regenerateElement(el) {
+      if (!el) return null;
       const type = el.dataset.type;
       const rec = (typeof StateSerializer !== 'undefined') ? StateSerializer.recordFromDataset(type, el.dataset) : null;
       const call = rec && StateSerializer.createCallFromRecord(rec);
-      if (!call || typeof this.svgEngine[call.method] !== 'function') return;
+      if (!call || typeof this.svgEngine[call.method] !== 'function') return null;
       const figure = el.getAttribute('data-figure');
       const labelDx = el.dataset.labelDx;
       const labelDy = el.dataset.labelDy;
@@ -83,7 +82,12 @@
         newEl.dataset.labelDy = labelDy || 0;
         this.svgEngine.applyLabelOffset(newEl);
       }
-      // 作り直した要素を単一選択に同期（選択集合の古い参照を更新）
+      return newEl;
+    },
+
+    // 選択要素を現在の data-* から作り直す（change(blur)時に呼ぶ前提）。新要素を選択し直す。
+    _regenerateSelected() {
+      const newEl = this._regenerateElement(this.selected);
       if (newEl) this._setSelection([newEl]);
       else this._clearSelection();
     }

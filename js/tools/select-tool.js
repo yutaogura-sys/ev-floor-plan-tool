@@ -928,7 +928,8 @@ class SelectTool {
     }
 
     // パネル編集を履歴に記録（フェーズ1: 重複スナップショットは updateChecklist 側で抑制）
-    if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+    // 一括編集中（_suppressHistory）は各要素ごとに記録せず、呼び出し側で最後に1回だけ記録する。
+    if (!this._suppressHistory && typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
   }
 
   // 外部（配置系ツール）から新規要素を選択してプロパティパネルを開く
@@ -983,15 +984,113 @@ class SelectTool {
     }
   }
 
-  // プロパティパネル：単一は従来、複数はサマリ、0は既定文言
+  // プロパティパネル：単一は従来、複数同型は一括編集、複数混在はサマリ、0は既定文言
   _refreshPropsForSelection() {
     if (this.selection.length === 1) {
       this._showProperties(this.selection[0]);
     } else if (this.selection.length > 1) {
-      this._showMultiProperties(this.selection.length);
+      const types = new Set(this.selection.map(el => el.dataset.type));
+      if (types.size === 1 && this._bulkFieldsFor([...types][0]).length) {
+        this._showBulkProperties([...types][0]);
+      } else {
+        this._showMultiProperties(this.selection.length);
+      }
     } else {
       this._clearProperties();
     }
+  }
+
+  // 同型一括編集できる「意味的に共有可能」な項目の定義（位置/寸法/番号/ラベル/本文は個体差なので除外）
+  _bulkFieldsFor(type) {
+    const ROT = { prop: 'rotation', label: '回転角度 (°)', kind: 'number', step: '1' };
+    const COLOR = { prop: 'color', label: '色', kind: 'color' };
+    const MAT_TEXT = { prop: 'material', label: '材質', kind: 'text' };
+    switch (type) {
+      case 'charger': return [
+        { prop: 'standType', label: 'スタンド種別', kind: 'select', options: ['パイルスタンド', 'アイフルスタンド', '壁付'] },
+        ROT
+      ];
+      case 'charging-space': return [ROT];
+      case 'wheel-stop': return [ROT];
+      case 'existing-charger': return [ROT];
+      case 'road-marking': return [
+        { prop: 'surfaceType', label: '路面状況', kind: 'select', options: ['アスファルト', 'コンクリート', 'インターロッキング', '透水性舗装', 'その他'] }
+      ];
+      case 'foundation': return [MAT_TEXT];
+      case 'handhole': return [MAT_TEXT];
+      case 'pole': return [MAT_TEXT, { prop: 'poleHeight', label: '高さ', kind: 'text' }];
+      case 'pullbox': return [{ prop: 'material', label: '材質', kind: 'select', options: ['SUS', '鉄'] }];
+      case 'dimension': return [COLOR];
+      case 'leader': return [COLOR];
+      case 'boundary-rect': return [COLOR];
+      case 'text': return [COLOR];
+      default: return [];
+    }
+  }
+
+  // 同型複数選択の一括編集パネル
+  _showBulkProperties(type) {
+    const panel = document.getElementById('properties-content');
+    if (!panel) return;
+    const fields = this._bulkFieldsFor(type);
+    const n = this.selection.length;
+    const first = this.selection[0];
+    const fieldHtml = fields.map(f => {
+      const cur = (f.prop === 'rotation') ? (parseFloat(first.dataset.rotation || 0) || 0)
+        : (first.dataset[f.prop] != null ? first.dataset[f.prop] : '');
+      if (f.kind === 'select') {
+        return `<div class="form-group"><label>${f.label}</label>
+          <select data-bulk-prop="${f.prop}" class="prop-input" style="width:100%;padding:4px;background:#2a2a2a;color:#ddd;border:1px solid #555;border-radius:3px;">
+            ${f.options.map(o => `<option value="${o}" ${o === cur ? 'selected' : ''}>${o}</option>`).join('')}
+          </select></div>`;
+      }
+      if (f.kind === 'color') {
+        return this._colorPickerHtml('color', cur || Utils.COLORS.blue).replace(/data-prop="color"/g, 'data-bulk-prop="color"');
+      }
+      const inputType = f.kind === 'number' ? 'number' : 'text';
+      const step = f.step ? `step="${f.step}"` : '';
+      return `<div class="form-group"><label>${f.label}</label><input type="${inputType}" ${step} value="${cur}" data-bulk-prop="${f.prop}" class="prop-input"></div>`;
+    }).join('');
+
+    panel.innerHTML =
+      `<p style="font-weight:600;margin-bottom:6px;">${this._getTypeName(type)} を ${n}個 選択中</p>` +
+      `<p style="font-size:11px;color:#888;margin:0 0 10px;">下の項目は選択全体にまとめて適用されます。</p>` +
+      fieldHtml +
+      `<button style="width:100%;margin-top:8px;padding:6px 8px;background:#f44;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;" onclick="app.toolManager.tools.select.deleteSelected()">🗑 ${n}個を削除</button>`;
+
+    // 入力変更を全選択へ一括適用
+    panel.querySelectorAll('[data-bulk-prop]').forEach(input => {
+      const ev = (input.tagName === 'SELECT') ? 'change' : 'change';
+      input.addEventListener(ev, () => this._applyBulkProp(input.dataset.bulkProp, input.value));
+    });
+    // カラープリセットボタン（_colorPickerHtml 由来）
+    panel.querySelectorAll('.color-preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this._applyBulkProp('color', btn.dataset.value);
+      });
+    });
+  }
+
+  // 1つのプロパティ値を選択集合の全要素へ適用（_onPropertyChange を要素ごとに再利用）。履歴は最後に1回。
+  _applyBulkProp(prop, value) {
+    const els = this.selection.slice();
+    if (!els.length) return;
+    const newEls = [];
+    this._suppressHistory = true;
+    try {
+      els.forEach(el => {
+        this.selected = el;                          // _onPropertyChange は this.selected に作用
+        this._onPropertyChange({ dataset: { prop }, value });
+        newEls.push(this.selected);                  // 再生成された場合は新要素に差し替わっている
+      });
+    } finally {
+      this._suppressHistory = false;
+    }
+    this.selection = newEls;
+    this.selected = newEls[newEls.length - 1] || null;
+    this._refreshSelectionVisual();
+    this._showBulkProperties(this.selection[0].dataset.type); // パネルを最新値で再描画
+    if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
   }
 
   _showMultiProperties(n) {
