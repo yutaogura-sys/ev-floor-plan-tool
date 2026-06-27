@@ -43,8 +43,9 @@
       <button class="layer-toggle-btn" data-layer="route" title="配線ルート図専用レイヤー">配線ルート図</button>
     </div>
     <div class="header-right">
+      <button class="btn-secondary" id="btn-help" title="ショートカット一覧 (?)" aria-label="ショートカット一覧">？ヘルプ</button>
       <button class="btn-secondary" id="btn-undo" title="元に戻す (Ctrl+Z)" disabled>↶ 戻す</button>
-      <button class="btn-secondary" id="btn-redo" title="やり直し (Ctrl+Y)" disabled>↷ やり直し</button>
+      <button class="btn-secondary" id="btn-redo" title="やり直し (Ctrl+Y / Ctrl+Shift+Z)" disabled>↷ やり直し</button>
       <button class="btn-secondary" id="btn-open-project" title="プロジェクトを開く">📂 開く</button>
       <button class="btn-secondary" id="btn-save-project" title="プロジェクトを保存">💾 保存</button>
       <input type="file" id="file-open-project" accept=".json" hidden>
@@ -367,6 +368,8 @@
     <span id="status-snap">スナップ: ON</span>
     <span id="status-tool">ツール: 選択</span>
     <span id="status-figure-layer"></span>
+    <span id="status-hint" style="margin-left:auto;color:#9fd0ff;"></span>
+    <span id="status-autosave" style="color:#8a8a8a;margin-left:12px;"></span>
   </footer>
 
   <!-- PDF参照モーダル -->
@@ -391,6 +394,7 @@
   <script src="lib/jspdf.umd.min.js"></script>
   <script src="lib/svg2pdf.umd.min.js"></script>
   <script src="js/utils.js"></script>
+  <script src="js/help-overlay.js"></script>
   <script src="js/state-serializer.js"></script>
   <script src="js/history.js"></script>
   <script src="js/review-panel.js"></script>

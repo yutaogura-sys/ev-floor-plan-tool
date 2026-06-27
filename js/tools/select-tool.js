@@ -44,6 +44,7 @@ class SelectTool {
   onKeyDown(e) {
     if (this.placing && e.key === 'Escape') {
       this._cancelPlacing();
+      if (e.preventDefault) e.preventDefault();  // tool-manager の「選択へ戻す」を抑止（既に選択ツール）
       if (e.stopPropagation) e.stopPropagation();
     }
   }
@@ -247,6 +248,7 @@ class SelectTool {
           this._setSelection(hits);
         }
       }
+      this._restoreHint();
       return;
     }
 
@@ -408,6 +410,7 @@ class SelectTool {
 
   deleteSelected() {
     if (!this.selection.length) return;
+    const n = this.selection.length;
     // 選択集合をすべて削除（PDFオーバーレイはビューア参照も掃除）
     this.selection.forEach(el => {
       if (el.dataset.type === 'pdf-overlay' && typeof app !== 'undefined') {
@@ -418,6 +421,8 @@ class SelectTool {
     });
     this._clearSelection();
     if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+    // 破壊的操作のフィードバックと取消導線（Nielsen 原則3）
+    if (Utils.toast) Utils.toast(`${n}個を削除しました（Ctrl+Z で元に戻せます）`);
   }
 
   // ========== Scale ==========
@@ -1172,6 +1177,7 @@ class SelectTool {
   // ========== 矩形（マーキー）選択 ==========
 
   _createMarquee(point) {
+    if (Utils.setStatusHint) Utils.setStatusHint('ドラッグして範囲を囲むと、重なる要素をまとめて選択');
     this._removeMarquee();
     this.marqueeEl = Utils.createSVGElement('rect', {
       x: point.x, y: point.y, width: 0, height: 0,
@@ -1236,6 +1242,7 @@ class SelectTool {
     });
     this.placingCentroid = { x: sx / els.length, y: sy / els.length };
     this._setSelection(els);                       // 選択枠で視覚化
+    if (Utils.setStatusHint) Utils.setStatusHint('貼り付け配置中：マウスで位置決め → クリックで確定 / Esc で取消');
     if (this.lastPoint) this._movePlacingTo(this.lastPoint); // 直近マウス位置へ即追従
   }
 
@@ -1262,6 +1269,7 @@ class SelectTool {
     this.placingEls = null;
     this._placeStarts = null;
     this.placingCentroid = null;
+    this._restoreHint();
     if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
   }
 
@@ -1272,7 +1280,15 @@ class SelectTool {
     this.placingEls = null;
     this._placeStarts = null;
     this.placingCentroid = null;
+    this._restoreHint();
     this._clearSelection();
+  }
+
+  // モード終了時にアクティブツールの基本ヒントへ戻す
+  _restoreHint() {
+    if (typeof app !== 'undefined' && app.toolManager && app.toolManager.showToolHint) {
+      app.toolManager.showToolHint();
+    }
   }
 
   // ========== Building Alignment ==========

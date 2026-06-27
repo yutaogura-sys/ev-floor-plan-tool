@@ -120,6 +120,13 @@ const Utils = {
     return (num > 1 && !isNaN(num)) ? num : null;
   },
 
+  // ステータスバーの操作ヒント（現在のツール/モードの使い方を案内）
+  setStatusHint(text) {
+    if (typeof document === 'undefined') return;
+    const el = document.getElementById('status-hint');
+    if (el) el.textContent = text ? `💡 ${text}` : '';
+  },
+
   // 非ブロッキングのトースト通知
   toast(message, type = 'info') {
     if (typeof document === 'undefined') return; // Node環境では何もしない

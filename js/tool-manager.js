@@ -26,7 +26,13 @@ class ToolManager {
   _initSnapToggle() {
     const el = document.getElementById('status-snap');
     if (!el) return;
+    // クリック可能なトグルだと一目で分かる見た目に（Nielsen 原則1/4）
     el.style.cursor = 'pointer';
+    el.style.padding = '1px 8px';
+    el.style.borderRadius = '10px';
+    el.style.border = '1px solid #555';
+    el.style.userSelect = 'none';
+    el.setAttribute('role', 'switch');
     el.title = 'クリックでグリッドスナップを切替';
     el.addEventListener('click', () => {
       this.snapEnabled = !this.snapEnabled;
@@ -37,7 +43,12 @@ class ToolManager {
 
   _updateSnapIndicator() {
     const el = document.getElementById('status-snap');
-    if (el) el.textContent = this.snapEnabled ? `スナップ: ON (${this.gridSize}m)` : 'スナップ: OFF';
+    if (!el) return;
+    el.textContent = this.snapEnabled ? `⊞ スナップ ON (${this.gridSize}m)` : '⊞ スナップ OFF';
+    el.setAttribute('aria-checked', this.snapEnabled ? 'true' : 'false');
+    el.style.background = this.snapEnabled ? '#2e7d32' : 'transparent';
+    el.style.color = this.snapEnabled ? '#fff' : '#aaa';
+    el.style.borderColor = this.snapEnabled ? '#2e7d32' : '#555';
   }
 
   registerTool(name, tool) {
@@ -117,6 +128,34 @@ class ToolManager {
     if (this.tools[name] && this.tools[name].activate) {
       this.tools[name].activate();
     }
+
+    this.showToolHint();
+  }
+
+  // アクティブツールの操作方法をステータスバーに表示（モード中は各所が上書きする）
+  showToolHint() {
+    const hints = {
+      'select': 'クリックで選択／空き地をドラッグで範囲選択／Shift+クリックで追加／矢印で微調整／Ctrl+C・Vでコピペ',
+      'pan': 'ドラッグで表示位置を移動',
+      'charging-space': 'ドラッグで充電スペースの矩形を描画',
+      'charger': 'クリックで充電設備を配置',
+      'dimension': '始点→終点の2点をクリックで寸法線',
+      'boundary-rect': 'クリックで囲み線を配置',
+      'road-marking': 'クリックで路面表示を配置',
+      'wheel-stop': 'クリックで車止めを配置',
+      'bollard': 'クリックで防護部材を配置',
+      'lighting': 'クリックで電灯を配置',
+      'foundation': 'クリックで基礎を配置',
+      'text': 'クリックした位置にテキストを入力',
+      'wire': '引出し先→注記位置の2点をクリック',
+      'equipment': '引出し先→注記位置の2点をクリック',
+      'conduit': '引出し先→注記位置の2点をクリック',
+      'wiring-route': '頂点を順にクリック、ダブルクリック/Enterで確定、Escで取消',
+      'cubicle': 'クリックで分電盤を配置', 'pole': 'クリックで建柱を配置',
+      'handhole': 'クリックでハンドホールを配置', 'pullbox': 'クリックでプルボックスを配置',
+      'existing-charger': 'クリックで既設充電設備を配置'
+    };
+    if (Utils.setStatusHint) Utils.setStatusHint(hints[this.activeTool] || '');
   }
 
   _initToolButtons() {
@@ -182,6 +221,13 @@ class ToolManager {
         'j': 'handhole', 'u': 'pullbox', 'x': 'existing-charger'
       };
 
+      // ショートカット一覧（? = Shift+/）
+      if (e.key === '?' && typeof HelpOverlay !== 'undefined') {
+        HelpOverlay.toggle();
+        e.preventDefault();
+        return;
+      }
+
       // Forward key events to active tool first
       const activeTool = this.tools[this.activeTool];
       if (activeTool && activeTool.onKeyDown) {
@@ -193,8 +239,9 @@ class ToolManager {
         e.preventDefault();
       }
 
-      // Escape to select tool
-      if (e.key === 'Escape') {
+      // Escape：アクティブツールが処理（preventDefault）していなければ選択ツールへ戻す。
+      // 配置/作図モードを自前の Esc で取り消したツールは、ツール継続のまま留まれる。
+      if (e.key === 'Escape' && !e.defaultPrevented) {
         this.setActiveTool('select');
         this.svgEngine.clearInteraction();
       }

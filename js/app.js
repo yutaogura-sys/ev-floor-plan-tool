@@ -176,6 +176,10 @@ class App {
     // Bind file inputs
     this._bindFileInputs();
 
+    // ショートカット一覧ヘルプ
+    const helpBtn = document.getElementById('btn-help');
+    if (helpBtn) helpBtn.addEventListener('click', () => HelpOverlay.toggle());
+
     // Bind dual export buttons (PDF) — 出力前に要件チェック（#2）
     document.getElementById('btn-export-plan').addEventListener('click', async () => {
       if (await this._checkBeforeExport('plan')) this.pdfExporter.exportPDF('plan');
@@ -855,6 +859,8 @@ class App {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+    // 保存内容を明示（下図 DXF/PDF は含まれない＝開き直し時に再読込が必要）
+    if (Utils.toast) Utils.toast('プロジェクトを保存しました（注記のみ。下図のDXF/PDFは含まれません）');
   }
 
   async openProjectFile(file) {
@@ -894,8 +900,14 @@ class App {
       const viewBox = this.svgElement.getAttribute('viewBox');
       const state = StateSerializer.serializeProject(this.svgEngine, tbData, viewBox, this._currentDxfName());
       localStorage.setItem('ev-floorplan-autosave', JSON.stringify(state));
+      // 控えめな自動保存インジケータ（状態の可視化）
+      const el = document.getElementById('status-autosave');
+      if (el) el.textContent = `自動保存 ${new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}`;
     } catch (err) {
       console.warn('自動保存に失敗（容量超過の可能性）:', err.message);
+      const el = document.getElementById('status-autosave');
+      if (el) el.textContent = '⚠ 自動保存に失敗（容量超過の可能性）';
+      if (Utils.toast) Utils.toast('自動保存に失敗しました（ローカル容量超過の可能性）。手動保存をおすすめします。', 'error');
     }
   }
 
