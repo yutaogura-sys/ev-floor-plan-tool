@@ -3,11 +3,17 @@ class SelectTool {
   constructor(svgEngine, viewport) {
     this.svgEngine = svgEngine;
     this.viewport = viewport;
-    this.selected = null;
+    this.selected = null;        // 主（単一選択時の対象 / 選択集合の末尾）
+    this.selection = [];         // 選択集合（複数選択。常に selected を含む）
     this.isDragging = false;
     this.isScaling = false;
     this.isRotating = false;
     this.isLabelDragging = false; // 詳細ラベルのドラッグ中（#4）
+    this.isMarquee = false;       // 矩形選択中
+    this.marqueeStart = null;
+    this.marqueeEl = null;
+    this._marqueeShift = false;
+    this.dragStartPositions = null; // 一括移動用 Map(el→{x,y})
     this.labelDragStart = null;
     this.labelOffsetStart = null;
     this.dragStart = null;
@@ -22,14 +28,17 @@ class SelectTool {
   activate() {}
   deactivate() {
     this.selected = null;
+    this.selection = [];
+    this.isMarquee = false;
+    this._removeMarquee();
     this.svgEngine.clearInteraction();
   }
 
   onMouseDown(point, e) {
     if (e.button !== 0) return;
 
-    // Check if clicking on a handle first (scale/rotate)
-    const handle = this._hitTestHandle(point);
+    // Check if clicking on a handle first (scale/rotate) — 単一選択時のみ（複数選択中はハンドル非表示）
+    const handle = (this.selection.length === 1) ? this._hitTestHandle(point) : null;
     if (handle && this.selected) {
       if (handle === 'rotate') {
         this._startRotate(point);
@@ -39,8 +48,8 @@ class SelectTool {
       return;
     }
 
-    // 詳細ラベルのドラッグ（#4）: 選択中グループの detail-label テキストを掴んだら label-drag へ
-    if (this.selected && e && e.target && e.target.classList &&
+    // 詳細ラベルのドラッグ（#4）: 単一選択中グループの detail-label テキストを掴んだら label-drag へ
+    if (this.selected && this.selection.length === 1 && e && e.target && e.target.classList &&
         e.target.classList.contains('detail-label') &&
         !e.target.classList.contains('leader-connector') &&
         this.selected.contains(e.target)) {
@@ -55,21 +64,34 @@ class SelectTool {
 
     const ann = this.svgEngine.findAnnotationAt(point.x, point.y);
     if (ann) {
-      this.selected = ann;
-      this.svgEngine.showSelection(ann);
+      // Shift+クリック: 選択集合にトグル（追加/除外）。ドラッグは開始しない。
+      if (e && e.shiftKey) {
+        this._toggleInSelection(ann);
+        return;
+      }
+      // 集合外の要素を素のクリック → その要素だけを選択（集合を置換）。
+      // 既に集合に含まれる要素なら選択を維持して一括移動へ。
+      if (!this._isSelected(ann)) {
+        this._setSelection([ann]);
+      }
+      // (複数)移動ドラッグ開始: 全選択要素の開始位置を記録
       this.isDragging = true;
       this.dragStart = { x: point.x, y: point.y };
-
-      const x = parseFloat(ann.dataset.x || 0);
-      const y = parseFloat(ann.dataset.y || 0);
-      this.elementStart = { x, y };
-
-      this._showProperties(ann);
+      this.dragStartPositions = new Map();
+      this.selection.forEach(el => {
+        this.dragStartPositions.set(el, {
+          x: parseFloat(el.dataset.x || 0) || 0,
+          y: parseFloat(el.dataset.y || 0) || 0
+        });
+      });
+      this.elementStart = this.dragStartPositions.get(this.selected);
       if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
     } else {
-      this.selected = null;
-      this.svgEngine.clearInteraction();
-      this._clearProperties();
+      // 空き地で押下 → 矩形（マーキー）選択を開始
+      this.isMarquee = true;
+      this._marqueeShift = !!(e && e.shiftKey);
+      this.marqueeStart = { x: point.x, y: point.y };
+      this._createMarquee(point);
     }
   }
 
@@ -107,57 +129,90 @@ class SelectTool {
       return;
     }
 
-    // Move drag
-    if (!this.isDragging || !this.selected) return;
+    // 矩形（マーキー）選択中
+    if (this.isMarquee) {
+      this._updateMarquee(point);
+      return;
+    }
+
+    // Move drag（単一/複数）
+    if (!this.isDragging || !this.selected || !this.dragStartPositions) return;
 
     const dx = point.x - this.dragStart.x;
     const dy = point.y - this.dragStart.y;
-    let newX = this.elementStart.x + dx;
-    let newY = this.elementStart.y + dy;
-
-    // スナップON時は移動先もグリッドへ吸着（配置と挙動を一貫させる）
+    // 主にスナップを適用し、その確定デルタを全選択へ適用（相対位置を維持）
+    let pNewX = this.elementStart.x + dx;
+    let pNewY = this.elementStart.y + dy;
     const _tm = (typeof app !== 'undefined') ? app.toolManager : null;
     if (_tm && _tm.snapEnabled && Utils.snapToGrid) {
-      newX = Utils.snapToGrid(newX, _tm.gridSize);
-      newY = Utils.snapToGrid(newY, _tm.gridSize);
+      pNewX = Utils.snapToGrid(pNewX, _tm.gridSize);
+      pNewY = Utils.snapToGrid(pNewY, _tm.gridSize);
     }
+    const appliedDx = pNewX - this.elementStart.x;
+    const appliedDy = pNewY - this.elementStart.y;
 
-    const type = this.selected.dataset.type;
+    this.selection.forEach(el => {
+      const start = this.dragStartPositions.get(el);
+      if (!start) return;
+      this._moveElementTo(el, start.x + appliedDx, start.y + appliedDy, start);
+    });
 
+    this._refreshSelectionVisual();
+  }
+
+  // 1要素を (newX,newY) へ移動（型別の transform/data 更新）。一括移動・nudge から共用。
+  // start: ドラッグ開始時の {x,y}（絶対位置型の translate 量算出に使用）。
+  _moveElementTo(el, newX, newY, start) {
+    const type = el.dataset.type;
     if (type === 'pdf-overlay') {
-      this.selected.dataset.x = newX;
-      this.selected.dataset.y = newY;
-      this._updatePdfOverlayTransform();
-    } else if (type === 'charger' || type === 'wheel-stop') {
-      const rotation = this.selected.dataset.rotation || 0;
-      this.selected.setAttribute('transform', `translate(${newX},${newY}) rotate(${rotation})`);
-      this.selected.dataset.x = newX;
-      this.selected.dataset.y = newY;
-    } else if (type === 'charging-space') {
-      // Charging space uses translate(x,y) rotate(r) with local-coord children
-      const rotation = this.selected.dataset.rotation || 0;
-      this.selected.setAttribute('transform', `translate(${newX},${newY}) rotate(${rotation})`);
-      this.selected.dataset.x = newX;
-      this.selected.dataset.y = newY;
+      el.dataset.x = newX;
+      el.dataset.y = newY;
+      if (el === this.selected) this._updatePdfOverlayTransform();
+    } else if (type === 'charger' || type === 'wheel-stop' || type === 'charging-space') {
+      // translate(x,y) rotate(r)：充電器/車止め/充電スペースはローカル座標の子を持つ
+      const rotation = el.dataset.rotation || 0;
+      el.setAttribute('transform', `translate(${newX},${newY}) rotate(${rotation})`);
+      el.dataset.x = newX;
+      el.dataset.y = newY;
     } else {
-      // 絶対位置から平行移動量を算出（スナップ後も視覚とデータが一致する）
-      this.selected.setAttribute('transform', `translate(${newX - this.elementStart.x},${newY - this.elementStart.y})`);
-      this.selected.dataset.x = newX;
-      this.selected.dataset.y = newY;
+      // 絶対座標の子を持つ要素は開始位置からの平行移動量で translate
+      el.setAttribute('transform', `translate(${newX - start.x},${newY - start.y})`);
+      el.dataset.x = newX;
+      el.dataset.y = newY;
     }
-
-    this.svgEngine.showSelection(this.selected);
   }
 
   onMouseUp(point, e) {
+    // 矩形（マーキー）選択の確定
+    if (this.isMarquee) {
+      const rect = this._finishMarquee(point);
+      this.isMarquee = false;
+      const tiny = (rect.maxX - rect.minX < 0.1) && (rect.maxY - rect.minY < 0.1);
+      if (tiny) {
+        // クリック相当：Shift無しなら全解除
+        if (!this._marqueeShift) this._clearSelection();
+      } else {
+        const hits = this._annotationsInRect(rect);
+        if (this._marqueeShift) {
+          const merged = this.selection.slice();
+          hits.forEach(h => { if (merged.indexOf(h) === -1) merged.push(h); });
+          this._setSelection(merged);
+        } else {
+          this._setSelection(hits);
+        }
+      }
+      return;
+    }
+
     const wasManipulating = this.isDragging || this.isScaling || this.isRotating || this.isLabelDragging;
     this.isDragging = false;
     this.isScaling = false;
     this.isRotating = false;
     this.isLabelDragging = false;
-    if (this.selected) {
-      this.svgEngine.showSelection(this.selected);
-      this._showProperties(this.selected);
+    this.dragStartPositions = null;
+    if (this.selection.length) {
+      this._refreshSelectionVisual();
+      this._refreshPropsForSelection();
     }
     // Record move/scale/rotate so it is independently undoable.
     // updateChecklist's dedup guard skips this when nothing actually changed (e.g. a plain click-select).
@@ -299,27 +354,24 @@ class SelectTool {
     // Preserve figure layer
     if (newEl) {
       newEl.setAttribute('data-figure', figure);
-      // Select the new element
-      this.selected = newEl;
-      this.svgEngine.showSelection(newEl);
-      this._showProperties(newEl);
+      // 複写した要素を単一選択（元は非選択に）
+      this._setSelection([newEl]);
       if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
     }
   }
 
   deleteSelected() {
-    if (this.selected) {
-      // If it's a PDF overlay, also clean up viewer reference
-      if (this.selected.dataset.type === 'pdf-overlay' && typeof app !== 'undefined') {
-        app.pdfViewer.removeOverlay(this.selected.dataset.id);
+    if (!this.selection.length) return;
+    // 選択集合をすべて削除（PDFオーバーレイはビューア参照も掃除）
+    this.selection.forEach(el => {
+      if (el.dataset.type === 'pdf-overlay' && typeof app !== 'undefined') {
+        app.pdfViewer.removeOverlay(el.dataset.id);
       } else {
-        this.selected.remove();
+        el.remove();
       }
-      this.selected = null;
-      this.svgEngine.clearInteraction();
-      this._clearProperties();
-      if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
-    }
+    });
+    this._clearSelection();
+    if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
   }
 
   // ========== Scale ==========
@@ -856,14 +908,170 @@ class SelectTool {
   // 外部（配置系ツール）から新規要素を選択してプロパティパネルを開く
   selectElement(element) {
     if (!element) return;
-    this.selected = element;
-    this.svgEngine.showSelection(element);
-    this._showProperties(element);
+    this._setSelection([element]);
   }
 
   _clearProperties() {
     const panel = document.getElementById('properties-content');
     panel.innerHTML = '<p class="placeholder-text">要素を選択してください</p>';
+  }
+
+  // ========== 選択集合（複数選択） ==========
+
+  _isSelected(el) {
+    return this.selection.indexOf(el) !== -1;
+  }
+
+  // 選択集合を置換し、主＝末尾、視覚・パネルを更新
+  _setSelection(els) {
+    this.selection = (els || []).filter(Boolean);
+    this.selected = this.selection.length ? this.selection[this.selection.length - 1] : null;
+    this._refreshSelectionVisual();
+    this._refreshPropsForSelection();
+  }
+
+  // 要素を選択集合にトグル（追加/除外）
+  _toggleInSelection(el) {
+    const i = this.selection.indexOf(el);
+    if (i === -1) this.selection.push(el);
+    else this.selection.splice(i, 1);
+    this.selected = this.selection.length ? this.selection[this.selection.length - 1] : null;
+    this._refreshSelectionVisual();
+    this._refreshPropsForSelection();
+  }
+
+  _clearSelection() {
+    this.selection = [];
+    this.selected = null;
+    this.svgEngine.clearInteraction();
+    this._clearProperties();
+  }
+
+  // 選択表示：単一はハンドル付き、複数は各要素に薄い枠
+  _refreshSelectionVisual() {
+    this.svgEngine.clearInteraction();
+    if (this.selection.length === 1) {
+      this.svgEngine.showSelection(this.selection[0]);
+    } else if (this.selection.length > 1) {
+      this._drawSelectionOutlines(this.selection);
+    }
+  }
+
+  // プロパティパネル：単一は従来、複数はサマリ、0は既定文言
+  _refreshPropsForSelection() {
+    if (this.selection.length === 1) {
+      this._showProperties(this.selection[0]);
+    } else if (this.selection.length > 1) {
+      this._showMultiProperties(this.selection.length);
+    } else {
+      this._clearProperties();
+    }
+  }
+
+  _showMultiProperties(n) {
+    const panel = document.getElementById('properties-content');
+    if (!panel) return;
+    panel.innerHTML =
+      `<div style="font-size:13px;line-height:1.7;">` +
+      `<p style="margin:0 0 8px;font-weight:bold;">${n}個を選択中</p>` +
+      `<p style="margin:0 0 10px;color:#555;">ドラッグで一括移動、矢印キーで微調整、Ctrl+C/V で複写できます。</p>` +
+      `<button style="width:100%;padding:6px 8px;background:#f44;color:#fff;border:none;border-radius:3px;cursor:pointer;font-size:12px;" onclick="app.toolManager.tools.select.deleteSelected()">🗑 ${n}個を削除</button>` +
+      `</div>`;
+  }
+
+  // 要素の描画座標系（layer ローカル）でのバウンディングボックスを返す。
+  // getBBox（ローカル）× CTM で平行移動/回転を反映し、AABB を算出する。
+  _elBBoxInLayer(el) {
+    const b = el.getBBox();
+    const layer = this.svgEngine.interactionLayer;
+    const layerCTM = layer.getCTM();
+    const elCTM = el.getCTM();
+    if (!layerCTM || !elCTM) {
+      // CTM 取得不可（非表示等）: dataset 由来の素朴な箱を返す
+      const x = parseFloat(el.dataset.x || 0) || 0;
+      const y = parseFloat(el.dataset.y || 0) || 0;
+      return { minX: x, minY: y, maxX: x, maxY: y, width: 0, height: 0 };
+    }
+    const m = layerCTM.inverse().multiply(elCTM);
+    const corners = [
+      { x: b.x, y: b.y },
+      { x: b.x + b.width, y: b.y },
+      { x: b.x, y: b.y + b.height },
+      { x: b.x + b.width, y: b.y + b.height }
+    ];
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    corners.forEach(c => {
+      const px = m.a * c.x + m.c * c.y + m.e;
+      const py = m.b * c.x + m.d * c.y + m.f;
+      if (px < minX) minX = px;
+      if (py < minY) minY = py;
+      if (px > maxX) maxX = px;
+      if (py > maxY) maxY = py;
+    });
+    return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
+  }
+
+  _drawSelectionOutlines(els) {
+    const pad = (this.svgEngine.S && this.svgEngine.S.selPad) || 0.1;
+    els.forEach(el => {
+      const bb = this._elBBoxInLayer(el);
+      const rect = Utils.createSVGElement('rect', {
+        x: bb.minX - pad, y: bb.minY - pad,
+        width: bb.width + pad * 2, height: bb.height + pad * 2,
+        class: 'selection-box'
+      });
+      this.svgEngine.interactionLayer.appendChild(rect);
+    });
+  }
+
+  // ========== 矩形（マーキー）選択 ==========
+
+  _createMarquee(point) {
+    this._removeMarquee();
+    this.marqueeEl = Utils.createSVGElement('rect', {
+      x: point.x, y: point.y, width: 0, height: 0,
+      fill: 'rgba(74,158,255,0.12)',
+      stroke: Utils.COLORS.selection,
+      'stroke-width': 0.04,
+      'stroke-dasharray': '0.2 0.12'
+    });
+    this.svgEngine.interactionLayer.appendChild(this.marqueeEl);
+  }
+
+  _updateMarquee(point) {
+    if (!this.marqueeEl) return;
+    const x = Math.min(this.marqueeStart.x, point.x);
+    const y = Math.min(this.marqueeStart.y, point.y);
+    this.marqueeEl.setAttribute('x', x);
+    this.marqueeEl.setAttribute('y', y);
+    this.marqueeEl.setAttribute('width', Math.abs(point.x - this.marqueeStart.x));
+    this.marqueeEl.setAttribute('height', Math.abs(point.y - this.marqueeStart.y));
+  }
+
+  _finishMarquee(point) {
+    this._removeMarquee();
+    const s = this.marqueeStart || { x: point.x, y: point.y };
+    return {
+      minX: Math.min(s.x, point.x), minY: Math.min(s.y, point.y),
+      maxX: Math.max(s.x, point.x), maxY: Math.max(s.y, point.y)
+    };
+  }
+
+  _removeMarquee() {
+    if (this.marqueeEl) { this.marqueeEl.remove(); this.marqueeEl = null; }
+  }
+
+  // 矩形 rect と AABB が交差する注釈を返す
+  _annotationsInRect(rect) {
+    const hits = [];
+    this.svgEngine.getAnnotations().forEach(el => {
+      const bb = this._elBBoxInLayer(el);
+      if (bb.minX < rect.maxX && bb.maxX > rect.minX &&
+          bb.minY < rect.maxY && bb.maxY > rect.minY) {
+        hits.push(el);
+      }
+    });
+    return hits;
   }
 
   // ========== Building Alignment ==========

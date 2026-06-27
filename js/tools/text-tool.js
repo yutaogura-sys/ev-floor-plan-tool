@@ -31,7 +31,7 @@ class TextTool {
     if (newText === null) return;
     const sel = (typeof app !== 'undefined') && app.toolManager.tools.select;
     if (sel && sel._rebuildTextAnnotation) {
-      sel.selected = ann;
+      sel._setSelection([ann]);
       sel._rebuildTextAnnotation(ann, newText);
     } else {
       const t = ann.querySelector('text');
