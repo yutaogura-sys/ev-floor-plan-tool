@@ -1,7 +1,8 @@
 {
   "scripts": {
     "test": "node --test test/*.test.js",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test e2e/smoke.spec.js",
+    "test:usability": "playwright test e2e/usability.spec.js",
     "start": "node server.js"
   },
   "dependencies": {

@@ -807,8 +807,8 @@ class App {
 
   pasteClipboard() {
     if (!this._clipboard || !this._clipboard.length) return;
-    const OFFSET = 0.5; // m：貼り付け位置を少しずらす
-    const recs = StateSerializer.offsetRecords(this._clipboard, OFFSET, OFFSET);
+    // 元座標のまま生成し、配置モードでカーソルに追従させる（クリックで確定）
+    const recs = StateSerializer.offsetRecords(this._clipboard, 0, 0);
     const pasted = [];
     recs.forEach(rec => {
       rec.id = Utils.generateId(); // 新規 id（既存と衝突させない）
@@ -827,9 +827,8 @@ class App {
     });
     if (pasted.length) {
       this.toolManager.setActiveTool('select');
-      this.toolManager.tools.select._setSelection(pasted);
-      if (this.updateChecklist) this.updateChecklist();
-      Utils.toast(`${pasted.length}個を貼り付けました`);
+      this.toolManager.tools.select.beginPlacing(pasted); // カーソル追従配置（確定でupdateChecklist）
+      Utils.toast(`${pasted.length}個を配置：クリックで確定 / Esc で取消`);
     }
   }
 
