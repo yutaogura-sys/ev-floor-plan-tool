@@ -14,6 +14,11 @@ class SelectTool {
     this.marqueeEl = null;
     this._marqueeShift = false;
     this.dragStartPositions = null; // 一括移動用 Map(el→{x,y})
+    this.lastPoint = null;          // 直近のマウス位置（貼り付け追従の初期位置に使用）
+    this.placing = false;           // 貼り付け配置モード（カーソル追従中）
+    this.placingEls = null;
+    this._placeStarts = null;
+    this.placingCentroid = null;
     this.labelDragStart = null;
     this.labelOffsetStart = null;
     this.dragStart = null;
@@ -27,6 +32,7 @@ class SelectTool {
 
   activate() {}
   deactivate() {
+    this._cancelPlacing();      // 未確定の貼り付けは破棄
     this.selected = null;
     this.selection = [];
     this.isMarquee = false;
@@ -34,8 +40,18 @@ class SelectTool {
     this.svgEngine.clearInteraction();
   }
 
+  // 貼り付け配置モード中の Escape でキャンセル（tool-manager から委譲）
+  onKeyDown(e) {
+    if (this.placing && e.key === 'Escape') {
+      this._cancelPlacing();
+      if (e.stopPropagation) e.stopPropagation();
+    }
+  }
+
   onMouseDown(point, e) {
     if (e.button !== 0) return;
+    // 貼り付け配置モード中はクリックで確定（通常の選択処理は行わない）
+    if (this.placing) { this._commitPlacing(); return; }
 
     // Check if clicking on a handle first (scale/rotate) — 単一選択時のみ（複数選択中はハンドル非表示）
     const handle = (this.selection.length === 1) ? this._hitTestHandle(point) : null;
@@ -96,6 +112,10 @@ class SelectTool {
   }
 
   onMouseMove(point, e) {
+    this.lastPoint = { x: point.x, y: point.y };
+    // 貼り付け配置モード：集合の重心をカーソルへ追従
+    if (this.placing) { this._movePlacingTo(point); return; }
+
     // 詳細ラベルのドラッグ（#4）
     if (this.isLabelDragging && this.selected) {
       let ddx = point.x - this.labelDragStart.x;
@@ -1197,6 +1217,62 @@ class SelectTool {
       }
     });
     return hits;
+  }
+
+  // ========== 貼り付け配置モード（カーソル追従 → クリックで確定 / Escでキャンセル） ==========
+
+  // 貼り付けた要素群を配置モードに入れる。集合の重心がカーソルに追従する。
+  beginPlacing(els) {
+    if (!els || !els.length) return;
+    this.placing = true;
+    this.placingEls = els.slice();
+    this._placeStarts = new Map();
+    let sx = 0, sy = 0;
+    els.forEach(el => {
+      const x = parseFloat(el.dataset.x || 0) || 0;
+      const y = parseFloat(el.dataset.y || 0) || 0;
+      this._placeStarts.set(el, { x, y });
+      sx += x; sy += y;
+    });
+    this.placingCentroid = { x: sx / els.length, y: sy / els.length };
+    this._setSelection(els);                       // 選択枠で視覚化
+    if (this.lastPoint) this._movePlacingTo(this.lastPoint); // 直近マウス位置へ即追従
+  }
+
+  _movePlacingTo(point) {
+    if (!this.placingEls || !this.placingCentroid) return;
+    let tx = point.x, ty = point.y;
+    const tm = (typeof app !== 'undefined') ? app.toolManager : null;
+    if (tm && tm.snapEnabled && Utils.snapToGrid) {
+      tx = Utils.snapToGrid(tx, tm.gridSize);
+      ty = Utils.snapToGrid(ty, tm.gridSize);
+    }
+    const dx = tx - this.placingCentroid.x;
+    const dy = ty - this.placingCentroid.y;
+    this.placingEls.forEach(el => {
+      const s = this._placeStarts.get(el);
+      if (s) this._moveElementTo(el, s.x + dx, s.y + dy);
+    });
+    this._refreshSelectionVisual();
+  }
+
+  _commitPlacing() {
+    if (!this.placing) return;
+    this.placing = false;
+    this.placingEls = null;
+    this._placeStarts = null;
+    this.placingCentroid = null;
+    if (typeof app !== 'undefined' && app.updateChecklist) app.updateChecklist();
+  }
+
+  _cancelPlacing() {
+    if (!this.placing) return;
+    (this.placingEls || []).forEach(el => el.remove());
+    this.placing = false;
+    this.placingEls = null;
+    this._placeStarts = null;
+    this.placingCentroid = null;
+    this._clearSelection();
   }
 
   // ========== Building Alignment ==========
