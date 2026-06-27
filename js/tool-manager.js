@@ -207,6 +207,22 @@ class ToolManager {
         }
       }
 
+      // 矢印キーで選択要素を微調整（nudge）: grid 単位、Shift で grid/5。selectツール時のみ。
+      if (this.activeTool === 'select' && !e.ctrlKey && !e.metaKey && !e.altKey &&
+          (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        const selectTool = this.tools['select'];
+        if (selectTool && selectTool.selection && selectTool.selection.length && selectTool.nudge) {
+          const step = e.shiftKey ? this.gridSize / 5 : this.gridSize;
+          let dx = 0, dy = 0;
+          if (e.key === 'ArrowLeft') dx = -step;
+          else if (e.key === 'ArrowRight') dx = step;
+          else if (e.key === 'ArrowUp') dy = -step;   // SVG は +y が下向き → 上は -y
+          else if (e.key === 'ArrowDown') dy = step;
+          selectTool.nudge(dx, dy);
+          e.preventDefault();
+        }
+      }
+
       // Ctrl+D duplicate selected
       if (e.key === 'd' && (e.ctrlKey || e.metaKey)) {
         const selectTool = this.tools['select'];
@@ -214,6 +230,14 @@ class ToolManager {
           selectTool.duplicateSelected();
         }
         e.preventDefault();
+      }
+
+      // Ctrl+C / Ctrl+V コピー&ペースト（選択集合をアプリ内クリップボードで複写）
+      if ((e.key === 'c' || e.key === 'C') && (e.ctrlKey || e.metaKey)) {
+        if (typeof app !== 'undefined' && app.copySelection) { app.copySelection(); e.preventDefault(); }
+      }
+      if ((e.key === 'v' || e.key === 'V') && (e.ctrlKey || e.metaKey)) {
+        if (typeof app !== 'undefined' && app.pasteClipboard) { app.pasteClipboard(); e.preventDefault(); }
       }
 
       // Undo/Redo は app.js の keydown（doUndo/doRedo、入力欄ガード付き）が担う

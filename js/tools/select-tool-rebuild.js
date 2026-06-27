@@ -83,11 +83,9 @@
         newEl.dataset.labelDy = labelDy || 0;
         this.svgEngine.applyLabelOffset(newEl);
       }
-      this.selected = newEl || null;
-      if (newEl) {
-        this.svgEngine.showSelection(newEl);
-        this._showProperties(newEl);
-      }
+      // 作り直した要素を単一選択に同期（選択集合の古い参照を更新）
+      if (newEl) this._setSelection([newEl]);
+      else this._clearSelection();
     }
   });
 })();

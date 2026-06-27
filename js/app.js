@@ -777,6 +777,62 @@ class App {
     if (redoBtn) redoBtn.disabled = !this.history.canRedo();
   }
 
+  // 選択集合の DXF 座標 union bbox を返す（選択へズーム用）。select ツールで選択がある時のみ。
+  // _elBBoxInLayer は描画(SVG)座標を返すため dxfY = -svgY で変換する。
+  getSelectionBoundsDxf() {
+    const sel = this.toolManager.tools.select;
+    if (!sel || this.toolManager.activeTool !== 'select' || !sel.selection || !sel.selection.length) return null;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    sel.selection.forEach(el => {
+      const bb = sel._elBBoxInLayer(el);
+      if (!isFinite(bb.minX)) return;
+      if (bb.minX < minX) minX = bb.minX;
+      if (bb.minY < minY) minY = bb.minY;
+      if (bb.maxX > maxX) maxX = bb.maxX;
+      if (bb.maxY > maxY) maxY = bb.maxY;
+    });
+    if (!isFinite(minX)) return null;
+    return { minX, maxX, minY: -maxY, maxY: -minY }; // SVG → DXF（y反転）
+  }
+
+  // ===== コピー & ペースト（アプリ内クリップボード） =====
+  copySelection() {
+    const sel = this.toolManager.tools.select;
+    if (!sel || !sel.selection || !sel.selection.length) return;
+    this._clipboard = sel.selection
+      .map(el => StateSerializer.recordFromDataset(el.dataset.type, el.dataset))
+      .filter(Boolean);
+    if (this._clipboard.length) Utils.toast(`${this._clipboard.length}個をコピーしました`);
+  }
+
+  pasteClipboard() {
+    if (!this._clipboard || !this._clipboard.length) return;
+    const OFFSET = 0.5; // m：貼り付け位置を少しずらす
+    const recs = StateSerializer.offsetRecords(this._clipboard, OFFSET, OFFSET);
+    const pasted = [];
+    recs.forEach(rec => {
+      rec.id = Utils.generateId(); // 新規 id（既存と衝突させない）
+      const call = StateSerializer.createCallFromRecord(rec);
+      if (!call || typeof this.svgEngine[call.method] !== 'function') return;
+      try {
+        const el = this.svgEngine[call.method].apply(this.svgEngine, call.args);
+        if (el && rec.figure) el.setAttribute('data-figure', rec.figure);
+        if (el && (rec.labelDx || rec.labelDy)) {
+          el.dataset.labelDx = rec.labelDx || 0;
+          el.dataset.labelDy = rec.labelDy || 0;
+          if (typeof this.svgEngine.applyLabelOffset === 'function') this.svgEngine.applyLabelOffset(el);
+        }
+        if (el) pasted.push(el);
+      } catch (e) { /* 未対応型はスキップ */ }
+    });
+    if (pasted.length) {
+      this.toolManager.setActiveTool('select');
+      this.toolManager.tools.select._setSelection(pasted);
+      if (this.updateChecklist) this.updateChecklist();
+      Utils.toast(`${pasted.length}個を貼り付けました`);
+    }
+  }
+
   // ===== 保存 / 読込 =====
   _currentDxfName() {
     const el = document.getElementById('dxf-name');
