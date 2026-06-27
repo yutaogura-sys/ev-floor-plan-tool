@@ -39,6 +39,8 @@ body { display: flex; flex-direction: column; }
 .btn-secondary:disabled { border-color: #555; color: #666; cursor: default; }
 
 /* ===== Header Layer Toggle ===== */
+.header-layer-group { display: flex; align-items: center; gap: 8px; }
+.hlt-caption { font-size: 10px; color: rgba(255,255,255,0.55); white-space: nowrap; }
 .header-layer-toggle { display: flex; gap: 0; border-radius: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.2); }
 .layer-toggle-btn { padding: 5px 14px; border: none; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s; white-space: nowrap; border-right: 1px solid rgba(255,255,255,0.1); }
 .layer-toggle-btn:last-child { border-right: none; }

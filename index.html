@@ -37,10 +37,13 @@
         </div>
       </div>
     </div>
-    <div class="header-layer-toggle" id="header-layer-toggle">
-      <button class="layer-toggle-btn active" data-layer="shared" title="共通レイヤー">共通</button>
-      <button class="layer-toggle-btn" data-layer="plan" title="平面図専用レイヤー">平面図</button>
-      <button class="layer-toggle-btn" data-layer="route" title="配線ルート図専用レイヤー">配線ルート図</button>
+    <div class="header-layer-group" title="これから配置する要素の帰属先（描画先の図面）。クリックでその図面の作図に切り替わります。表示のオン/オフは右パネルの「表示レイヤー」で行います。">
+      <span class="hlt-caption">作業中の図面</span>
+      <div class="header-layer-toggle" id="header-layer-toggle">
+        <button class="layer-toggle-btn active" data-layer="shared" title="共通（両図面に表示）の作図に切替">共通</button>
+        <button class="layer-toggle-btn" data-layer="plan" title="平面図の作図に切替">平面図</button>
+        <button class="layer-toggle-btn" data-layer="route" title="配線ルート図の作図に切替">配線ルート図</button>
+      </div>
     </div>
     <div class="header-right">
       <button class="btn-secondary" id="btn-help" title="ショートカット一覧 (?)" aria-label="ショートカット一覧">？ヘルプ</button>
@@ -280,10 +283,11 @@
 
       <!-- レイヤー制御 -->
       <div class="panel-section" id="layer-section">
-        <h3 class="panel-title" data-collapse="layer-content">レイヤー</h3>
+        <h3 class="panel-title" data-collapse="layer-content">表示レイヤー（オン/オフ）</h3>
         <div class="panel-content" id="layer-content">
+          <p style="font-size:10px;color:#888;margin:0 0 6px;line-height:1.5">画面表示のオン/オフを切り替えます。<b>作図先（描画される図面）はヘッダーの「作業中の図面」</b>で指定します。</p>
           <div class="figure-layer-list">
-            <span class="section-label" style="font-size:11px;margin-bottom:4px;display:block">図面レイヤー</span>
+            <span class="section-label" style="font-size:11px;margin-bottom:4px;display:block">👁 図面の表示／非表示</span>
             <div class="layer-item">
               <input type="checkbox" id="fig-layer-plan" checked>
               <span class="layer-color" style="background:#cc0000"></span>
