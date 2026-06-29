@@ -39,6 +39,47 @@ const Utils = {
       .slice(0, 80) || 'untitled';
   },
 
+  // Shift-JIS(CP932) エンコード。DXF(R12)を日本語CAD(Jw_cad/AutoCAD-JP)で開けるようにする。
+  // 外部ライブラリ不要: TextDecoder('shift_jis') から char→bytes の逆引き表を一度だけ構築。
+  _sjisMap: null,
+  _buildSjisMap() {
+    const dec = new TextDecoder('shift_jis', { fatal: false });
+    const map = new Map();
+    for (let b = 0; b <= 0x7f; b++) map.set(String.fromCharCode(b), [b]); // ASCII
+    for (let b = 0xa1; b <= 0xdf; b++) { // 半角カナ
+      const c = dec.decode(Uint8Array.from([b]));
+      if (c && c !== '�') map.set(c, [b]);
+    }
+    const leads = [];
+    for (let l = 0x81; l <= 0x9f; l++) leads.push(l);
+    for (let l = 0xe0; l <= 0xfc; l++) leads.push(l);
+    for (const l of leads) {
+      for (let t = 0x40; t <= 0xfc; t++) {
+        if (t === 0x7f) continue;
+        const c = dec.decode(Uint8Array.from([l, t]));
+        if (c && c.length === 1 && c !== '�' && !map.has(c)) map.set(c, [l, t]);
+      }
+    }
+    return map;
+  },
+  // 文字列を Shift-JIS バイト列(Uint8Array)に変換。CP932に無い文字は '?'。
+  encodeShiftJIS(str) {
+    const s = String(str == null ? '' : str);
+    if (typeof TextDecoder === 'undefined') {
+      // TextDecoder非対応環境の保険（実用上は到達しない）
+      return (typeof TextEncoder !== 'undefined') ? new TextEncoder().encode(s) : Uint8Array.from(s, c => c.charCodeAt(0) & 0xff);
+    }
+    if (!this._sjisMap) this._sjisMap = this._buildSjisMap();
+    const map = this._sjisMap;
+    const out = [];
+    for (const ch of s) {
+      const b = map.get(ch);
+      if (b) { for (const x of b) out.push(x); }
+      else { out.push(0x3f); } // '?'
+    }
+    return Uint8Array.from(out);
+  },
+
   // Create SVG element with attributes
   createSVGElement(tag, attrs = {}) {
     const el = document.createElementNS('http://www.w3.org/2000/svg', tag);

@@ -24,8 +24,11 @@ class DXFExporter {
       progressFill.style.width = '90%';
       loadingText.textContent = 'ダウンロード中...';
 
-      // Download
-      const blob = new Blob([dxfString], { type: 'application/dxf' });
+      // Download（$DWGCODEPAGE=ANSI_932 に合わせ Shift-JIS で書き出す。
+      // 日本語ラベルが Jw_cad/AutoCAD-JP で文字化けせず開けるようにする）
+      const payload = (typeof Utils !== 'undefined' && Utils.encodeShiftJIS)
+        ? Utils.encodeShiftJIS(dxfString) : dxfString;
+      const blob = new Blob([payload], { type: 'application/dxf' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -102,7 +105,7 @@ class DXFExporter {
       '0', 'SECTION',
       '2', 'HEADER',
       '9', '$ACADVER', '1', 'AC1009',
-      '9', '$DWGCODEPAGE', '3', 'UTF-8',
+      '9', '$DWGCODEPAGE', '3', 'ANSI_932',
       '9', '$INSBASE', '10', '0.0', '20', '0.0', '30', '0.0',
       '9', '$EXTMIN', '10', bounds.minX.toFixed(4), '20', bounds.minY.toFixed(4), '30', '0.0',
       '9', '$EXTMAX', '10', bounds.maxX.toFixed(4), '20', bounds.maxY.toFixed(4), '30', '0.0',
