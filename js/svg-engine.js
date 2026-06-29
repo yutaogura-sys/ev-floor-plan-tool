@@ -55,13 +55,15 @@ class SVGEngine {
       'EV_WIRING_ROUTE': '#ff6600', 'EV_CUBICLE': '#ff6600',
       'EV_POLE': '#ff6600', 'EV_HANDHOLE': '#ff6600'
     };
+    // 線幅は vector-effect:non-scaling-stroke（CSS）により画面px相当に解釈される。
+    // 座標系の大小（数千単位の図面でも）に依らず一定の見やすい太さを保つ。
     const layerWidths = {
-      'ROAD': 0.08, 'BUILDING': 0.12, 'STRUCTURE': 0.1, 'CENTER': 0.05, '0': 0.08
+      'ROAD': 0.8, 'BUILDING': 1.2, 'STRUCTURE': 1.0, 'CENTER': 0.6, '0': 0.8
     };
 
     for (const [layerName, layerData] of Object.entries(dxfData.layers)) {
       const color = layerColors[layerName] || '#777';
-      const width = layerWidths[layerName] || 0.08;
+      const width = layerWidths[layerName] || 0.8;
       const group = Utils.createSVGElement('g', {
         id: `layer-${layerName}`, class: 'dxf-layer',
         stroke: color,
