@@ -155,6 +155,9 @@ body { display: flex; flex-direction: column; }
 /* ===== SVG Drawing Styles ===== */
 /* All sizes in DXF units (meters). At 1:100 on A3: 0.1m = 1mm on paper. */
 .dxf-layer { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+/* 下図(DXF)の線は座標スケール・ズームに依らず一定の太さで描画する。
+   DXFの座標系が大きい(例: 数千単位)図面でも線が極細(サブピクセル)で消えないようにする。 */
+#dxf-layer path, #dxf-layer line, #dxf-layer polyline, #dxf-layer circle { vector-effect: non-scaling-stroke; }
 #layer-ROAD { stroke: #888; stroke-width: 0.08; }
 #layer-BUILDING { stroke: #333; stroke-width: 0.12; }
 #layer-STRUCTURE { stroke: #666; stroke-width: 0.1; }
